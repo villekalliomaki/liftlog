@@ -1,42 +1,27 @@
-use axum::{routing::get, Router};
+mod http_server;
+mod settings;
+
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
-use crate::config::Config;
-
 
 #[tokio::main]
 async fn main() {
     init_tracing();
 
-    let config = Config::from_env();
+    info!("Starting LiftLog");
 
-    init_server().await;
+    let current_setttings = settings::build();
+
+    http_server::start(&current_setttings.listen_address).await;
 }
 
-/**
- * Initialize tracing library for logging
- */
+// Initialize tracing library for logging
 fn init_tracing() {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::TRACE)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    info!("Tracing initialized")
 }
-
-/**
- * Initialize and start HTTP server
- */
-async fn init_server() {
-    info!("Starting server");
-
-    // build our application with a single route
-    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
-
-    // run it with hyper on localhost:3000
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-}
-
