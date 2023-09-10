@@ -15,28 +15,28 @@ pub struct Settings {
 // Will exit progam on errors
 #[instrument]
 pub fn build() -> Settings {
-    info!("Starting building configuration");
+    info!("Starting building settings");
 
     load_env_file();
 
-    let conf = Config::builder()
+    let settings_result = Config::builder()
         .add_source(config::Environment::with_prefix("LIFTLOG").try_parsing(true))
         .build();
 
-    let conf_result = match conf {
+    let settings = match settings_result {
         Ok(result) => result,
         Err(error) => {
-            error!("Failed to build config: {}", error);
+            error!("Failed to build settings: {}", error);
             exit(1);
         }
     };
 
-    let app_configuration_result: Result<Settings, ConfigError> = conf_result.try_deserialize();
+    let app_configuration_result: Result<Settings, ConfigError> = settings.try_deserialize();
 
     match app_configuration_result {
-        Ok(result) => result,
+        Ok(app_configuration) => app_configuration,
         Err(error) => {
-            error!("Failed to deserialize config: {}", error);
+            error!("Failed to deserialize settings: {}", error);
             exit(1);
         }
     }

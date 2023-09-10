@@ -15,3 +15,6 @@ Cargo.lock
 
 # Env files
 .env
+
+# Persistent data for development
+development_data

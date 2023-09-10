@@ -1,4 +1,7 @@
+mod api;
 mod http_server;
+mod models;
+mod pg;
 mod settings;
 
 use tracing::{info, Level};
@@ -12,7 +15,9 @@ async fn main() {
 
     let current_setttings = settings::build();
 
-    http_server::start(&current_setttings.listen_address).await;
+    let pg_pool = pg::create_pool(&current_setttings.database_url).await;
+
+    http_server::start(&current_setttings.listen_address, &pg_pool).await;
 }
 
 // Initialize tracing library for logging

@@ -1,13 +1,16 @@
-use axum::{routing::get, Router};
+use sqlx::PgPool;
 use std::{
     net::{AddrParseError, SocketAddr},
     process::exit,
 };
-use tracing::{error, info};
+use tracing::{error, info, instrument};
+
+use crate::api::routes;
 
 // Initialize and start HTTP server
-pub async fn start(addr: &str) {
-    info!("Starting HTTP server on {}", addr);
+#[instrument]
+pub async fn start(addr: &str, pg_pool: &PgPool) {
+    info!("Starting HTTP server on http://{}", addr);
 
     // Parse listen address
     let parsed_addr_result: Result<SocketAddr, AddrParseError> = addr.parse();
@@ -24,11 +27,11 @@ pub async fn start(addr: &str) {
     };
 
     // build our application with a single route
-    let app = Router::new().route("/", get(|| async { "Hello, World!" }));
+    let app_router = routes::build_router(pg_pool);
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&parsed_addr)
-        .serve(app.into_make_service())
+        .serve(app_router.into_make_service())
         .await
         .unwrap();
 }
