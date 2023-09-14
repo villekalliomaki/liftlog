@@ -9,7 +9,7 @@ use crate::api::routes;
 
 // Initialize and start HTTP server
 #[instrument]
-pub async fn start(addr: &str, pg_pool: &PgPool) {
+pub async fn start(addr: &str, pg_pool: PgPool) {
     info!("Starting HTTP server on http://{}", addr);
 
     // Parse listen address

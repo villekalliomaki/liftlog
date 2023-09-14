@@ -17,13 +17,13 @@ async fn main() {
 
     let pg_pool = pg::create_pool(&current_setttings.database_url).await;
 
-    http_server::start(&current_setttings.listen_address, &pg_pool).await;
+    http_server::start(&current_setttings.listen_address, pg_pool).await;
 }
 
 // Initialize tracing library for logging
 fn init_tracing() {
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::DEBUG)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
