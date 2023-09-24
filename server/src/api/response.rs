@@ -1,3 +1,4 @@
+use axum::http::StatusCode;
 use serde::Serialize;
 
 // Reponse to a successful API request
@@ -8,6 +9,9 @@ pub struct RouteSuccess<D> {
     msg: String,
     // Data being returned
     data: D,
+    // HTTP status
+    #[serde(skip_serializing)]
+    status: StatusCode,
 }
 
 // Response to an API request which resulted in an error
@@ -18,6 +22,9 @@ pub struct RouteError {
     msg: String,
     // Field name, if error was caused by bad input
     field: Option<String>,
+    // HTTP status
+    #[serde(skip_serializing)]
+    status: StatusCode,
 }
 
 // Shorthand for the complete return type for route handlers
@@ -86,5 +93,20 @@ mod tests {
         let axum_response: axum::response::Response = response.into();
 
         assert_eq!(status, axum_response.status());
+    }
+
+    // Status code should not be serialized
+    #[tokio::test]
+    async fn success_body_status_serialization() {
+        let response = RouteSuccess::<i32>::new("test", 1, StatusCode::OK);
+
+        let axum_response: axum::response::Response = response.into();
+
+        // Check that status code is not in serialized JSON
+        let serialized_body = axum_response.into_body().data().await.unwrap().unwrap();
+        let body_as_string = String::from(serialized_body);
+        let as_json: serde_json::Value = serde_json::from_str(&body_as_string).unwrap().into();
+
+        assert!(as_json.get("status").is_none())
     }
 }
