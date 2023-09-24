@@ -14,6 +14,5 @@ pub fn build_router(pg_pool: PgPool) -> Router {
 
     Router::new()
         .route("/ping", get(ping::handle))
-        .route("/usertest", get(user::new))
         .with_state(pg_pool)
 }

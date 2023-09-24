@@ -1,17 +1,17 @@
-use anyhow::{Error, Ok};
+use anyhow::Error;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
-use sqlx::{FromRow, PgPool};
+use serde::Serialize;
+use sqlx::PgPool;
 use tracing::{info, instrument, warn};
 use uuid::Uuid;
 
 // User for only authentication and authorization.
 // Ties together all other data.
-#[derive(Serialize, Deserialize, Debug, FromRow)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct User {
     // Primary key, not really shown to the user
     pub id: Uuid,
@@ -27,8 +27,8 @@ pub struct User {
 impl User {
     // Creates a new user.
     #[instrument]
-    pub async fn new(pg_pool: &PgPool, username: String, password: String) -> anyhow::Result<User> {
-        info!("Trying to create a new user '{}'", username);
+    pub async fn new(pg_pool: &PgPool, username: String, password: String) -> Result<User, anyhow::Error> {
+        info!("Requested to create a new user '{}'", username);
 
         // Check that the username is available
         let username_exists = sqlx::query!("SELECT * FROM users WHERE username = $1", username)
@@ -39,22 +39,16 @@ impl User {
             return Err(anyhow::Error::msg("Username already exists."));
         }
 
-        // Hash the password
-        // Should be in a "worker" thread
-        let password_hash = hash_password(password)?;
+        let hashed_password = tokio::task::spawn_blocking(|| hash_password(password)).await??;
 
-        // Create and return new user
-        let new_user = sqlx::query_as!(
+        Ok(sqlx::query_as!(
             User,
-            "INSERT INTO users(username, password_hash) VALUES (?, ?) RETURNING *",
+            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING *;",
             username,
-            password_hash,
+            hashed_password
         )
         .fetch_one(pg_pool)
-        .await?;
-    
-
-        Ok(new_user)
+        .await?)
     }
 }
 

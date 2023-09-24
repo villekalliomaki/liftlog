@@ -24,4 +24,4 @@ Development database can be brought up with `docker-compose up -d`. Because the 
 
 ## Development
 
-For sqlx migrations and generating them, the sqlx-cli tool is needed. Install (or update) it with `cargo install sqlx-cli`. To connect to the database: `psql "postgresql://postgres:postgres@127.0.0.1/postgres"`.
+For sqlx migrations and generating them, the sqlx-cli tool is needed. Install (or update) it with `cargo install sqlx-cli`. To connect to the database: `psql "postgresql://postgres:postgres@127.0.0.1/liftlog"`.
