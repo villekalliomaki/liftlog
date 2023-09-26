@@ -1,10 +1,12 @@
 use axum::http::StatusCode;
 use serde::Serialize;
+use tracing::{debug, error, instrument, warn};
+use std::fmt::Debug;
 
 // Reponse to a successful API request
 // Status 200 by default
 #[derive(Serialize, Debug, Clone, PartialEq)]
-pub struct RouteSuccess<D> {
+pub struct RouteSuccess<D> where D: Serialize + Debug {
     // Human readable message
     msg: String,
     // Data being returned
@@ -12,6 +14,19 @@ pub struct RouteSuccess<D> {
     // HTTP status
     #[serde(skip_serializing)]
     status: StatusCode,
+}
+
+impl<D> RouteSuccess<D> where D: Serialize + Debug {
+    // Creates a new RouteSuccess
+    #[instrument]
+    pub fn new(msg: impl ToString + Debug, data: D, status: StatusCode) -> Self {
+        debug!("Creating new RouteSuccess");
+        RouteSuccess {
+            msg: msg.to_string(),
+            data,
+            status,
+        }
+    }
 }
 
 // Response to an API request which resulted in an error
@@ -25,6 +40,22 @@ pub struct RouteError {
     // HTTP status
     #[serde(skip_serializing)]
     status: StatusCode,
+}
+
+impl RouteError {
+    // Creates a new RouteError
+    #[instrument]
+    pub fn new(msg: impl ToString + Debug, field: Option<impl ToString + Debug>, status: StatusCode) -> Self {
+        debug!("Creating new RouteError");
+        RouteError {
+            msg: msg.to_string(),
+            field: match field {
+                Some(from) => Some(from.to_string()),
+                None => None,
+            },
+            status,
+        }
+    }
 }
 
 // Shorthand for the complete return type for route handlers
@@ -57,7 +88,7 @@ mod tests {
     #[test]
     fn error_new() {
         let msg = "test";
-        let field = Some("name");
+        let field = Some("name".to_string());
         let status = StatusCode::BAD_REQUEST;
 
         let response = RouteError::new(msg, field, status);
