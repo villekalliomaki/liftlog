@@ -15,7 +15,7 @@ pub async fn clean_sqlx_pool() -> PgPool {
 
 // Deletes all users
 pub async fn clear_users(pool: &PgPool) {
-    sqlx::query!("DELETE FROM users;")
+    sqlx::query!("DELETE FROM users")
         .execute(pool)
         .await
         .unwrap();
