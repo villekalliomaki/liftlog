@@ -1,8 +1,11 @@
+#![allow(dead_code)]
+
 mod api;
 mod http_server;
 mod models;
 mod pg;
 mod settings;
+mod test_utils;
 
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;

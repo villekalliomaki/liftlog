@@ -123,6 +123,29 @@ impl IntoResponse for RouteError {
     }
 }
 
+// Some conversions for common error types to RouteError
+// for easy error handling
+
+impl Into<RouteError> for sqlx::error::Error {
+    #[instrument]
+    fn into(self) -> RouteError {
+        debug!("Converting sqlx::error::Error to a RouteError");
+
+        match self {
+            // TODO: implement user-facing enum variants
+            _ => {
+                warn!("Encountered an unimplemented database error: {}. API will respond, but with a generic error.", self);
+
+                RouteError::new(
+                    "A database error occurred.",
+                    None::<&str>,
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                )
+            }
+        }
+    }
+}
+
 // Shorthand for the complete return type for route handlers
 //
 // Most common errors should implement Into<RouteError>, which means
