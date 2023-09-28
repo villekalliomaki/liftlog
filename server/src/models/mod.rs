@@ -1,2 +1,2 @@
-pub mod token;
+pub mod access_token;
 pub mod user;
