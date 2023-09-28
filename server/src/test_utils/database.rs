@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 
-use crate::{pg, settings};
+use crate::{models::user::User, pg, settings};
 
 // Creates a database connection pool based on the settings
 // Also wiped the database, so each test can start with a clean db
@@ -19,4 +19,9 @@ pub async fn clear_users(pool: &PgPool) {
         .execute(pool)
         .await
         .unwrap();
+}
+
+// Create a test user
+pub async fn test_user(pool: &PgPool) -> User {
+    User::new("test", "test", pool).await.unwrap()
 }

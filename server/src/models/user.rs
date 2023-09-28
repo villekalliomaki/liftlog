@@ -258,6 +258,8 @@ fn validate_password_hash(password: String, hash: &String) -> Result<(), RouteEr
 // User tests interact with the database, so there are helper functions to prepare it
 #[cfg(test)]
 mod tests {
+    use serial_test::serial;
+
     use super::*;
     use crate::{api::response::RouteError, test_utils};
 
@@ -265,6 +267,7 @@ mod tests {
     const USERNAME: &str = "test_username";
 
     #[tokio::test]
+    #[serial]
     async fn username_conflict() {
         let pool = &test_utils::database::clean_sqlx_pool().await;
 
@@ -280,6 +283,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn changed_column_update() {
         let pool = &test_utils::database::clean_sqlx_pool().await;
 
@@ -303,6 +307,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn valid_password() {
         let pool = &test_utils::database::clean_sqlx_pool().await;
 
@@ -315,6 +320,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn invalid_password() {
         let pool = &test_utils::database::clean_sqlx_pool().await;
 
@@ -329,6 +335,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn password_change() {
         let pool = &test_utils::database::clean_sqlx_pool().await;
 
@@ -351,6 +358,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn delete() {
         let pool = &test_utils::database::clean_sqlx_pool().await;
 
