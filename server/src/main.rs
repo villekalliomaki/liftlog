@@ -18,9 +18,9 @@ async fn main() {
 
     let current_setttings = settings::build();
 
-    let pg_pool = pg::create_pool(&current_setttings.database_url).await;
+    let pool = pg::create_pool(&current_setttings.database_url).await;
 
-    http_server::start(&current_setttings.listen_address, pg_pool).await;
+    http_server::start(&current_setttings.listen_address, pool).await;
 }
 
 // Initialize tracing library for logging

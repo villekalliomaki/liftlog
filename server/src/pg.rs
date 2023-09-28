@@ -40,6 +40,12 @@ pub async fn create_pool(url: &str) -> Pool<Postgres> {
         exit(1);
     }
 
+    info!("Running migrations");
+    if let Err(error) = sqlx::migrate!().run(&pool).await {
+        error!("Failed to apply migratios: {}", error);
+        exit(1);
+    }
+
     info!("PostgreSQL connection pool created");
 
     pool
