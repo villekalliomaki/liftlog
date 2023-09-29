@@ -29,6 +29,8 @@ pub async fn start(addr: &str, pg_pool: PgPool) {
     // build our application with a single route
     let app_router = routes::build_router(pg_pool);
 
+    info!("Starting HTTP server on: http://{}", addr);
+
     // run it with hyper on localhost:3000
     axum::Server::bind(&parsed_addr)
         .serve(app_router.into_make_service())

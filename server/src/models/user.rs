@@ -25,7 +25,7 @@ pub struct User {
     // Unique display username
     pub username: String,
     #[serde(skip_serializing)]
-    password_hash: String,
+    pub password_hash: String,
 }
 
 impl User {
@@ -197,31 +197,6 @@ fn hash_password(password: String) -> Result<String, RouteError> {
             ))
         }
     };
-
-    // match hash_operation {
-    //     Ok(hash_result) => match hash_result {
-    //         Ok(hash) => Ok(hash.to_string()),
-    //         Err(error) => {
-    //             error!("Failed to hash a password: {}", error);
-    //             Err(RouteError::new(
-    //                 "Failed to hash the password.",
-    //                 Some("password"),
-    //                 StatusCode::INTERNAL_SERVER_ERROR,
-    //             ))
-    //         }
-    //     },
-    //     Err(error) => {
-    //         error!(
-    //             "Failed to complete password hashing in another thread: {}",
-    //             error
-    //         );
-    //         Err(RouteError::new(
-    //             "Failed to hash the password.",
-    //             Some("password"),
-    //             StatusCode::INTERNAL_SERVER_ERROR,
-    //         ))
-    //     }
-    // }
 }
 
 // Validate that the given password matched the given hash
