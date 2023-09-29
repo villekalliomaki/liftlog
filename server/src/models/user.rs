@@ -4,11 +4,19 @@ use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
-use axum::http::StatusCode;
+use axum::{
+    async_trait,
+    extract::FromRequestParts,
+    http::{request::Parts, StatusCode},
+};
+use axum_extra::{
+    headers::{authorization::Bearer, Authorization},
+    TypedHeader,
+};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
-use tracing::{error, info, instrument};
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::api::response::RouteError;
@@ -153,6 +161,29 @@ impl User {
             .await?;
 
         Ok(())
+    }
+}
+
+// Derive an user from a request containing a valid access token in the headers
+#[async_trait]
+impl<S> FromRequestParts<S> for User
+where
+    S: Send + Sync,
+{
+    type Rejection = RouteError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // From here: https://github.com/tokio-rs/axum/blob/main/examples/jwt/src/main.rs
+        let TypedHeader(Authorization(bearer_token)) = parts
+            .extract::<TypedHeader<Authorization<Bearer>>>()
+            .await
+            .map_err(|_| {
+                RouteError::new(
+                    "Authorization header is missing.",
+                    None::<&str>,
+                    StatusCode::BAD_REQUEST,
+                )
+            })?;
     }
 }
 
