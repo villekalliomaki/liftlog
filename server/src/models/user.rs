@@ -6,7 +6,7 @@ use argon2::{
 };
 use axum::{
     async_trait,
-    extract::FromRequestParts,
+    extract::{FromRef, FromRequestParts},
     headers::{authorization::Bearer, Authorization},
     http::{request::Parts, StatusCode},
     RequestPartsExt, TypedHeader,
@@ -17,7 +17,7 @@ use sqlx::PgPool;
 use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
-use crate::api::response::RouteError;
+use crate::{api::response::RouteError, models::access_token::AccessToken};
 
 // User for authentication and authorization
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -163,15 +163,16 @@ impl User {
 }
 
 // Derive an user from a request containing a valid access token in the headers
+// From https://docs.rs/axum/latest/axum/extract/struct.State.html#for-library-authors
 #[async_trait]
 impl<S> FromRequestParts<S> for User
 where
-    S: Send + Sync + Debug,
+    PgPool: FromRef<S>,
+    S: Send + Sync,
 {
     type Rejection = RouteError;
 
-    #[instrument]
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         debug!("Trying to get an user from the 'Authorization' header");
 
         let TypedHeader(Authorization(bearer_token)) = parts
@@ -184,6 +185,12 @@ where
                     StatusCode::BAD_REQUEST,
                 )
             })?;
+
+        let pool = &PgPool::from_ref(state);
+
+        let access_token = AccessToken::from_token(bearer_token.token(), pool).await?;
+
+        Ok(access_token.get_user(pool).await?)
     }
 }
 
