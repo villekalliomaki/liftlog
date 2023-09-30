@@ -7,11 +7,9 @@ use argon2::{
 use axum::{
     async_trait,
     extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
-};
-use axum_extra::{
     headers::{authorization::Bearer, Authorization},
-    TypedHeader,
+    http::{request::Parts, StatusCode},
+    RequestPartsExt, TypedHeader,
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -168,12 +166,14 @@ impl User {
 #[async_trait]
 impl<S> FromRequestParts<S> for User
 where
-    S: Send + Sync,
+    S: Send + Sync + Debug,
 {
     type Rejection = RouteError;
 
+    #[instrument]
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        // From here: https://github.com/tokio-rs/axum/blob/main/examples/jwt/src/main.rs
+        debug!("Trying to get an user from the 'Authorization' header");
+
         let TypedHeader(Authorization(bearer_token)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
