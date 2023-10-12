@@ -12,15 +12,16 @@ use axum::{
     RequestPartsExt, TypedHeader,
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tracing::{debug, error, info, instrument};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{api::response::RouteError, models::access_token::AccessToken};
 
 // User for authentication and authorization
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 pub struct User {
     // Primary key, not really shown to the user
     pub id: Uuid,

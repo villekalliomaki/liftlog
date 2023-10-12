@@ -3,9 +3,10 @@ use std::fmt::{Debug, Display};
 use axum::http::StatusCode;
 use chrono::{DateTime, Duration, Utc};
 use rand::{distributions::Alphanumeric, Rng};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tracing::{error, info, instrument, warn};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::api::response::RouteError;
@@ -13,12 +14,12 @@ use crate::api::response::RouteError;
 use super::user::User;
 
 // Used to authenticate single API requests to a specific user
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 pub struct AccessToken {
-    token: String,
-    created: DateTime<Utc>,
-    expires: DateTime<Utc>,
-    user_id: Uuid,
+    pub token: String,
+    pub created: DateTime<Utc>,
+    pub expires: DateTime<Utc>,
+    pub user_id: Uuid,
 }
 
 impl AccessToken {

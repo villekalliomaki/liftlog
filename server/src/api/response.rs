@@ -2,23 +2,26 @@ use axum::{
     http::{header, StatusCode},
     response::IntoResponse,
 };
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use std::fmt::Debug;
 use tracing::{debug, error, instrument, warn};
+use utoipa::ToSchema;
 
 // Reponse to a successful API request
 // Status 200 by default
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+#[aliases(RouteSuccessString = RouteSuccess<String>)]
 pub struct RouteSuccess<D>
 where
     D: Serialize + Debug,
 {
     // Human readable message
-    msg: String,
+    pub msg: String,
     // Data being returned
-    data: D,
+    pub data: D,
     // HTTP status
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     status: StatusCode,
 }
 
@@ -66,14 +69,15 @@ impl<D: Serialize + Debug> IntoResponse for RouteSuccess<D> {
 
 // Response to an API request which resulted in an error
 // Status 400 by default
-#[derive(Serialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 pub struct RouteError {
     // Human readable error message
-    msg: String,
+    pub msg: String,
     // Field name, if error was caused by bad input
-    field: Option<String>,
+    pub field: Option<String>,
     // HTTP status
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     status: StatusCode,
 }
 
