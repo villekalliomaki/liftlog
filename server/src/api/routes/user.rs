@@ -1,3 +1,24 @@
+use axum::extract::State;
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde::Deserialize;
+use sqlx::PgPool;
+use validator::Validate;
+
+use crate::{api::response::RouteResponse, models::user::User};
+
+lazy_static! {
+    static ref REGEX_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_-]{1,20}$").unwrap();
+}
+
+#[derive(Debug, Validate, Deserialize)]
+struct CreateUserInput {
+    username: String,
+    password: String,
+}
+
+// pub async fn create_user(State(pool): State<PgPool>) -> RouteResponse<User> {}
+
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderName, HeaderValue, StatusCode};
