@@ -1,41 +1,94 @@
 name: Test and build
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
 
 env:
-  CARGO_TERM_COLOR: always
-  LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
-  LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
-  DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
+    CARGO_TERM_COLOR: always
+    LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
+    LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
+    DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
 
 jobs:
-  build:
-    services:
-      # Label used to access the service container
-      postgres:
-        # Docker Hub image
-        image: postgres
-        # Provide the password for postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      working-directory: ./server
-      run: cargo build --verbose
-    - name: Run tests
-      working-directory: ./server
-      run: cargo test --verbose
+    test:
+        name: Test
+        services:
+            postgres:
+                image: postgres
+                ports:
+                    - 5432:5432
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: liftlog
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions-rs/toolchain@v1
+              with:
+                  profile: minimal
+                  toolchain: stable
+                  override: true
+            - name: Migrate database
+              run: |
+                  cargo install sqlx-cli --no-default-features --features postgres
+                  sqlx database create
+                  sqlx migrate run
+            - uses: actions-rs/cargo@v1
+              with:
+                  command: test
+    fmt:
+        name: Rustfmt
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  override: true
+                  components: rustfmt
+            - uses: actions-rs/cargo@v1
+              with:
+                  command: fmt
+                  args: --all -- --check
+    clippy:
+        name: Clippy
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres
+                ports:
+                    - 5432:5432
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: liftlog
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions-rs/toolchain@v1
+              with:
+                  components: clippy
+                  toolchain: stable
+                  override: true
+            - name: Migrate database
+              run: |
+                  cargo install sqlx-cli --no-default-features --features postgres
+                  sqlx database create
+                  sqlx migrate run
+            - uses: actions-rs/clippy-check@v1
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  args: -- -D warnings

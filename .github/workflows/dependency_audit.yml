@@ -1,4 +1,4 @@
-name: Dependency audit
+name: Dependecy security audit
 on:
   push:
     paths:
