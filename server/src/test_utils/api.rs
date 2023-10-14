@@ -14,7 +14,7 @@ pub fn test_server(pool: PgPool) -> TestServer {
 }
 
 // Create a test server, access token and an user
-pub async fn test_app(pool: PgPool) -> (TestServer, User, AccessToken) {
+pub async fn create_test_app(pool: PgPool) -> (TestServer, User, AccessToken) {
     let user_and_token = test_access_token(&pool).await;
 
     let server = test_server(pool);

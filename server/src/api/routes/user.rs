@@ -1,23 +1,43 @@
-use axum::extract::State;
+use axum::{extract::State, http::StatusCode, Json};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
 use validator::Validate;
 
-use crate::{api::response::RouteResponse, models::user::User};
+use crate::{
+    api::response::{RouteResponse, RouteSuccess},
+    models::user::User,
+};
 
 lazy_static! {
     static ref REGEX_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_-]{1,20}$").unwrap();
 }
 
 #[derive(Debug, Validate, Deserialize)]
-struct CreateUserInput {
+pub struct CreateUserInput {
+    #[validate(regex(
+        path = "REGEX_USERNAME",
+        message = "only letters a-z, A-Z, numbers, - and _ are allowed"
+    ))]
     username: String,
+    #[validate(length(min = 10, max = 200, message = "must be between 10 and 200 characters"))]
     password: String,
 }
 
-// pub async fn create_user(State(pool): State<PgPool>) -> RouteResponse<User> {}
+// New user from the username and password provided
+pub async fn create_user(
+    State(pool): State<PgPool>,
+    Json(body): Json<CreateUserInput>,
+) -> RouteResponse<User> {
+    body.validate()?;
+
+    Ok(RouteSuccess::new(
+        "New user created.",
+        User::new(body.username, body.password, &pool).await?,
+        StatusCode::OK,
+    ))
+}
 
 #[cfg(test)]
 mod tests {
@@ -71,7 +91,7 @@ mod tests {
 
         // Should be able to get self with an access token
         let get_self = server
-            .get("/api/user")
+            .post("/api/user")
             .add_header(
                 HeaderName::from_static("Authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())

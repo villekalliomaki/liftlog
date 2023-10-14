@@ -1,8 +1,9 @@
 mod ping;
 mod user;
+mod access_token;
 
 use crate::api::response::*;
-use axum::{routing::get, Router};
+use axum::{routing::{get, post}, Router};
 use sqlx::PgPool;
 use tracing::{info, instrument};
 use utoipa::{
@@ -51,5 +52,6 @@ pub fn build_router(pool: PgPool) -> Router {
         .merge(Redoc::with_url("/redoc", ApiDoc::openapi()))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
         .route("/api/ping", get(ping::handle))
+        .route("/api/user", post(user::create_user))
         .with_state(pool)
 }

@@ -32,6 +32,7 @@ pub struct User {
     // Unique display username
     pub username: String,
     #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub password_hash: String,
 }
 
@@ -211,7 +212,7 @@ async fn is_username_available(username: &String, pool: &PgPool) -> Result<(), R
         return Err(RouteError::new(
             "Username is already taken.",
             Some("username"),
-            StatusCode::BAD_REQUEST,
+            StatusCode::CONFLICT,
         ));
     }
 

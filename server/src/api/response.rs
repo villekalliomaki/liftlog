@@ -2,9 +2,10 @@ use axum::{
     http::{header, StatusCode},
     response::IntoResponse,
 };
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::{debug, error, instrument, warn};
+use tracing_subscriber::filter::LevelParseError;
 use utoipa::ToSchema;
 
 // Reponse to a successful API request
@@ -71,31 +72,62 @@ impl<D: Serialize + Debug> IntoResponse for RouteSuccess<D> {
 // Status 400 by default
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 pub struct RouteError {
-    // Human readable error message
-    pub msg: String,
-    // Field name, if error was caused by bad input
-    pub field: Option<String>,
+    // Should always be atleast one
+    errors: Vec<SingleRouteError>,
     // HTTP status
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
     status: StatusCode,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+struct SingleRouteError {
+    // Human readable error message
+    pub msg: String,
+    // Field name, if error was caused by bad input
+    pub field: Option<String>,
+}
+
 impl RouteError {
-    // Creates a new RouteError
+    // Creates a new RouteError with one error
     #[instrument]
     pub fn new(
         msg: impl ToString + Debug,
         field: Option<impl ToString + Debug>,
         status: StatusCode,
     ) -> Self {
-        debug!("Creating new RouteError");
+        debug!("Creating new RouteError with one error");
         RouteError {
+            errors: vec![SingleRouteError {
+                msg: msg.to_string(),
+                field: match field {
+                    Some(field) => Some(field.to_string()),
+                    None => None,
+                },
+            }],
+            status,
+        }
+    }
+
+    // Add a new error the list of errors
+    #[instrument]
+    pub fn add(&mut self, msg: impl ToString + Debug, field: Option<impl ToString + Debug>) {
+        debug!("Adding a new error to RouteError");
+
+        self.errors.push(SingleRouteError {
             msg: msg.to_string(),
             field: match field {
-                Some(from) => Some(from.to_string()),
+                Some(field) => Some(field.to_string()),
                 None => None,
             },
+        });
+    }
+
+    // RouteError without any errors
+    // Should only be used when adding n amount of them
+    pub fn empty(status: StatusCode) -> Self {
+        RouteError {
+            errors: Vec::new(),
             status,
         }
     }
@@ -150,6 +182,81 @@ impl From<sqlx::error::Error> for RouteError {
     }
 }
 
+impl From<validator::ValidationErrors> for RouteError {
+    #[instrument]
+    fn from(error: validator::ValidationErrors) -> Self {
+        debug!("Converting validator::ValidationErrors to a RouteError");
+
+        // Get all field level errors
+        let fields = error.field_errors();
+
+        let mut response = RouteError::empty(StatusCode::BAD_REQUEST);
+
+        // Generate single errors for all field validation errors
+        for (key, errors) in fields {
+            let mut formatted_messages = format!("Invalid input in {} field: ", key);
+
+            if errors.len() > 1 {
+                // Combile all validation errors for the single field if there are multiple
+                for (i, error) in errors.iter().enumerate() {
+                    match error.message.to_owned() {
+                        Some(message) => {
+                            if i == errors.len() - 1 {
+                                // Last error
+                                formatted_messages = formatted_messages + message.as_ref();
+                            } else {
+                                // Still other errors left
+                                formatted_messages = formatted_messages + &format!("{}, ", message);
+                            }
+                        }
+                        None => {
+                            warn!("Encountered a validation error without an error message");
+
+                            formatted_messages = formatted_messages + "invalid input";
+                        }
+                    }
+                }
+            } else if errors.len() == 1 {
+                // Just one validation error
+                match errors.get(0) {
+                    Some(error) => match error.message.to_owned() {
+                        Some(message) => {
+                            formatted_messages = formatted_messages + message.as_ref();
+                        }
+                        None => {
+                            warn!("Encountered a validation error without an error message");
+
+                            formatted_messages = formatted_messages + "invalid input";
+                        }
+                    },
+                    None => {
+                        error!("Empty errors vec after checking, should be impossible");
+
+                        return RouteError::new(
+                            "Internal error, expected atleast one field error.",
+                            None::<&str>,
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                        );
+                    }
+                }
+            } else {
+                // No validation errors for some reason, should not happen
+                error!("Validation failed, but didn't return any errors");
+
+                return RouteError::new(
+                    "Input validation failed, but didn't return any errors.",
+                    None::<&str>,
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            }
+
+            response.add(formatted_messages + ".", Some(key));
+        }
+
+        response
+    }
+}
+
 // Shorthand for the complete return type for route handlers
 //
 // Most common errors should implement Into<RouteError>, which means
@@ -186,8 +293,8 @@ mod tests {
         let response = RouteError::new(msg, field.clone(), status);
 
         assert_eq!(response.status, status);
-        assert_eq!(response.field, field);
-        assert_eq!(response.msg, msg);
+        assert_eq!(response.errors.get(0).unwrap().field, field);
+        assert_eq!(response.errors.get(0).unwrap().msg, msg);
     }
 
     // RouteSuccess should be able to be converted into an axum HTTP response
