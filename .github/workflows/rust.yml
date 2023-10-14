@@ -8,9 +8,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1/liftlog"
+  LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
   LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
-  DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1/liftlog"
+  DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
 
 jobs:
   build:
