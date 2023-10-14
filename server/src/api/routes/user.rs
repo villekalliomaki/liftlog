@@ -3,6 +3,8 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
+use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
@@ -11,20 +13,33 @@ use crate::{
 };
 
 lazy_static! {
-    static ref REGEX_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_-]{1,20}$").unwrap();
+    pub static ref REGEX_USERNAME: Regex = Regex::new(r"^[a-zA-Z0-9_-]{1,20}$").unwrap();
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, ToSchema)]
 pub struct CreateUserInput {
     #[validate(regex(
         path = "REGEX_USERNAME",
         message = "only letters a-z, A-Z, numbers, - and _ are allowed"
     ))]
+    #[schema(example = "some_username")]
     username: String,
     #[validate(length(min = 10, max = 200, message = "must be between 10 and 200 characters"))]
+    #[schema(example = "strong_password_with_at_least_10_characters")]
     password: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/user",
+    request_body = CreateUserInput,
+    responses(
+        (status = OK, description = "New user created", body = RouteSuccessUser),
+        (status = CONFLICT, description = "Username already taken", body = RouteError),
+        (status = INTERNAL_SERVER_ERROR, description = "Password hashing failed", body = RouteError)
+    ),
+    
+)]
 // New user from the username and password provided
 pub async fn create_user(
     State(pool): State<PgPool>,
@@ -37,6 +52,75 @@ pub async fn create_user(
         User::new(body.username, body.password, &pool).await?,
         StatusCode::OK,
     ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/user",
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "User found", body = RouteSuccessUser),
+        (status = FORBIDDEN, description = "Invalid access token", body = RouteError),
+        (status = BAD_REQUEST, description = "Access token missing or malformed", body = RouteError)
+    ),
+)]
+// Get the user from access token
+pub async fn get_self(user: User) -> RouteResponse<User> {
+    Ok(RouteSuccess::new(
+        "Found your user's details.",
+        user,
+        StatusCode::OK,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/user",
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "User has been deleted", body = RouteSuccessUuid),
+        (status = FORBIDDEN, description = "Invalid access token", body = RouteError),
+        (status = BAD_REQUEST, description = "Access token missing or malformed", body = RouteError)
+    ),
+)]
+pub async fn delete_user(user: User, State(pool): State<PgPool>) -> RouteResponse<Uuid> {
+    let user_id = user.id;
+
+    user.delete(&pool).await?;
+
+    Ok(RouteSuccess::new("User has been deleted.", user_id, StatusCode::OK))
+}
+
+#[derive(Debug, Validate, Deserialize, ToSchema)]
+pub struct ChangeUsernameInput {
+    #[validate(regex(
+        path = "REGEX_USERNAME",
+        message = "only letters a-z, A-Z, numbers, - and _ are allowed"
+    ))]
+    #[schema(example = "some_username")]
+    new_username: String,
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/user/username",
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "User has been deleted", body = RouteSuccessUser),
+        (status = FORBIDDEN, description = "Invalid access token", body = RouteError),
+        (status = BAD_REQUEST, description = "Access token missing or malformed", body = RouteError)
+    ),
+)]
+pub async fn change_username(mut user: User, Json(body): Json<ChangeUsernameInput>, State(pool): State<PgPool>) -> RouteResponse<User> {
+    user.change_username(body.new_username, &pool).await?;
+
+    Ok(RouteSuccess::new("Username changed.", user, StatusCode::OK))
 }
 
 #[cfg(test)]
@@ -52,8 +136,8 @@ mod tests {
         test_utils::api::test_server,
     };
 
-    const PASSWORD: &str = "3pWi7ttGSVVWLj";
-    const USERNAME: &str = "test_username";
+    const PASSWORD: &str = "testuserpassword";
+    const USERNAME: &str = "test";
 
     // Create a test user from the values above
     async fn test_user_from_api(server: &TestServer) -> User {
@@ -75,7 +159,8 @@ mod tests {
             .post("/api/access_token")
             .json(&json!({
                 "username": USERNAME,
-                "password": PASSWORD
+                "password": PASSWORD,
+                "validity_in_seconds": 60
             }))
             .await
             .json::<RouteSuccess<AccessToken>>()
@@ -93,7 +178,7 @@ mod tests {
         let get_self = server
             .post("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -141,7 +226,7 @@ mod tests {
         let delete_response = server
             .delete("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -155,7 +240,8 @@ mod tests {
             .post("/api/access_token")
             .json(&json!({
                 "username": USERNAME,
-                "password": PASSWORD
+                "password": PASSWORD,
+                "validity_in_seconds": 60
             }))
             .await;
 
@@ -174,10 +260,10 @@ mod tests {
 
         // Change the password to a different one
         let password_change_response = server
-            .patch("/api/user")
+            .patch("/api/user/password")
             .json(&json!({"new_password": new_password}))
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -191,7 +277,8 @@ mod tests {
             .post("/api/access_token")
             .json(&json!({
                 "username": USERNAME,
-                "password": PASSWORD
+                "password": PASSWORD,
+                "validity_in_seconds": 60
             }))
             .await;
 
@@ -202,7 +289,8 @@ mod tests {
             .post("/api/access_token")
             .json(&json!({
                 "username": USERNAME,
-                "password": new_password
+                "password": new_password,
+                "validity_in_seconds": 60
             }))
             .await;
 
@@ -220,10 +308,10 @@ mod tests {
 
         // Change the password to a different one
         let username_change_response = server
-            .patch("/api/user")
+            .patch("/api/user/username")
             .json(&json!({"new_username": new_username}))
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -235,7 +323,7 @@ mod tests {
         let get_self = server
             .get("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )

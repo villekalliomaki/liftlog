@@ -1,9 +1,15 @@
+mod access_token;
 mod ping;
 mod user;
-mod access_token;
 
-use crate::api::response::*;
-use axum::{routing::{get, post}, Router};
+use crate::{
+    api::{response::*, routes},
+    models,
+};
+use axum::{
+    routing::{delete, get, patch, post},
+    Router,
+};
 use sqlx::PgPool;
 use tracing::{info, instrument};
 use utoipa::{
@@ -25,12 +31,18 @@ pub fn build_router(pool: PgPool) -> Router {
     #[openapi(
         paths(
             ping::handle,
+            access_token::create_access_token,
+            access_token::delete_token,
+            user::create_user,
+            user::get_self,
+            user::delete_user,
+            user::change_username,
         ),
         modifiers(&SecurityAddon),
         tags(
             (name = "Liftlog", description = "Web application to record exercise sets and repetitions.")
         ),
-        components(schemas(RouteSuccessString))
+        components(schemas(RouteSuccessString, SingleRouteError, RouteError, models::access_token::AccessToken, models::user::User, routes::user::CreateUserInput, routes::user::ChangeUsernameInput, routes::access_token::CreateAccessTokenInput))
     )]
     struct ApiDoc;
 
@@ -40,7 +52,7 @@ pub fn build_router(pool: PgPool) -> Router {
         fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
             if let Some(components) = openapi.components.as_mut() {
                 components.add_security_scheme(
-                    "token",
+                    "access_token",
                     SecurityScheme::Http(HttpBuilder::new().scheme(HttpAuthScheme::Bearer).build()),
                 )
             }
@@ -52,6 +64,17 @@ pub fn build_router(pool: PgPool) -> Router {
         .merge(Redoc::with_url("/redoc", ApiDoc::openapi()))
         .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
         .route("/api/ping", get(ping::handle))
-        .route("/api/user", post(user::create_user))
+        .route(
+            "/api/user",
+            get(user::get_self)
+                .post(user::create_user)
+                .delete(user::delete_user),
+        )
+        .route("/api/user/username", patch(user::delete_user))
+        .route("/api/access_token", post(access_token::create_access_token))
+        .route(
+            "/api/access_token/:token",
+            delete(access_token::delete_token),
+        )
         .with_state(pool)
 }

@@ -1,3 +1,98 @@
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
+use chrono::Duration;
+use serde::Deserialize;
+use sqlx::PgPool;
+use utoipa::ToSchema;
+use validator::Validate;
+
+use crate::{
+    api::{
+        response::{RouteResponse, RouteSuccess},
+        routes::user::REGEX_USERNAME,
+    },
+    models::{access_token::AccessToken, user::User},
+};
+
+#[derive(Debug, Validate, Deserialize, ToSchema)]
+pub struct CreateAccessTokenInput {
+    #[validate(regex(
+        path = "REGEX_USERNAME",
+        message = "only letters a-z, A-Z, numbers, - and _ are allowed"
+    ))]
+    #[schema(example = "some_username")]
+    username: String,
+    #[validate(length(min = 10, max = 200, message = "must be between 10 and 200 characters"))]
+    #[schema(example = "strong_password_with_at_least_10_characters")]
+    password: String,
+    #[validate(range(
+        min = 1,
+        max = 2592000,
+        message = "validity is limited to 30 days (2592000 seconds)"
+    ))]
+    #[schema(example = "600")]
+    validity_in_seconds: i64,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/access_token",
+    request_body = CreateAccessTokenInput,
+    responses(
+        (status = OK, description = "New token created", body = RouteSuccessAccessToken),
+        (status = UNAUTHORIZED, description = "Wrong password", body = RouteError),
+        (status = NOT_FOUND, description = "Username not found", body = RouteError),
+        (status = INTERNAL_SERVER_ERROR, description = "Password hashing failed", body = RouteError)
+    )
+)]
+pub async fn create_access_token(
+    State(pool): State<PgPool>,
+    Json(body): Json<CreateAccessTokenInput>,
+) -> RouteResponse<AccessToken> {
+    body.validate()?;
+
+    let user = User::from_credentials(body.username, body.password, &pool).await?;
+
+    let duration = Duration::seconds(body.validity_in_seconds.into());
+
+    Ok(RouteSuccess::new(
+        "New access token created.",
+        AccessToken::new(user.id, duration, &pool).await?,
+        StatusCode::OK,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/access_token/{token}",
+    params(
+        ("token" = String, Path, description = "The token being deleted")
+    ),
+    responses(
+        (status = OK, description = "Token deleted", body = RouteSuccessString),
+        (status = FORBIDDEN, description = "Invalid access token", body = RouteError),
+        (status = BAD_REQUEST, description = "Access token missing or malformed", body = RouteError)
+    )
+)]
+pub async fn delete_token(
+    Path(token): Path<String>,
+    State(pool): State<PgPool>,
+) -> RouteResponse<String> {
+    AccessToken::from_token(&token, &pool)
+        .await?
+        .delete(&pool)
+        .await?;
+
+    Ok(RouteSuccess::new(
+        "Access token deleted.",
+        token,
+        StatusCode::OK,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderName, HeaderValue};
@@ -12,13 +107,13 @@ mod tests {
     };
 
     // A new access token to the test user which is valid for a minute
-    async fn create_test_token(server: &TestServer, validity_in_seconds: u64) -> AccessToken {
+    async fn create_test_token(server: &TestServer, validity_in_seconds: i64) -> AccessToken {
         // Create a new token using REST API
         let response = server
             .post("/api/access_token")
             .json(&json!({
                 "username": "test",
-                "password": "test",
+                "password": "testuserpassword",
                 "validity_in_seconds": validity_in_seconds
             }))
             .await;
@@ -39,7 +134,7 @@ mod tests {
         let self_response = server
             .get("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", new_access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -59,8 +154,7 @@ mod tests {
 
         // Delete the token
         let delete_response = server
-            .delete("/api/access_token")
-            .json(&json! ({"access_token": access_token.token}))
+            .delete(&format!("/api/access_token/{}", access_token.token))
             .await;
 
         delete_response.assert_status_success();
@@ -69,7 +163,7 @@ mod tests {
         let invalid_token_response = server
             .get("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -91,7 +185,7 @@ mod tests {
         let invalid_token_response = server
             .get("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes())
                     .unwrap(),
             )
@@ -135,7 +229,7 @@ mod tests {
         let invalid_token_response = server
             .get("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(
                     format!("Bearer {}", "this_is_not_a_valid_token").as_bytes(),
                 )
@@ -154,7 +248,7 @@ mod tests {
         let invalid_token_response = server
             .get("/api/user")
             .add_header(
-                HeaderName::from_static("Authorization"),
+                HeaderName::from_static("authorization"),
                 HeaderValue::from_bytes(
                     format!("Bearer {}", "should not be spaces here").as_bytes(),
                 )

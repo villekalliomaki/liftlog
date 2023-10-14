@@ -5,7 +5,7 @@ use crate::models::{user::User, access_token::AccessToken};
 
 // Create a test user
 pub async fn test_user(pool: &PgPool) -> User {
-    User::new("test", "test", pool).await.unwrap()
+    User::new("test", "testuserpassword", pool).await.unwrap()
 }
 
 // A test token based on the test user, return both

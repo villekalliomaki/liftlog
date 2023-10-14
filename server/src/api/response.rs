@@ -5,18 +5,21 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::{debug, error, instrument, warn};
-use tracing_subscriber::filter::LevelParseError;
 use utoipa::ToSchema;
+use uuid::Uuid;
+
+use crate::models::{access_token::AccessToken, user::User};
 
 // Reponse to a successful API request
 // Status 200 by default
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
-#[aliases(RouteSuccessString = RouteSuccess<String>)]
+#[aliases(RouteSuccessUuid = RouteSuccess<Uuid>, RouteSuccessString = RouteSuccess<String>, RouteSuccessAccessToken = RouteSuccess<AccessToken>, RouteSuccessUser = RouteSuccess<User>)]
 pub struct RouteSuccess<D>
 where
     D: Serialize + Debug,
 {
     // Human readable message
+    #[schema(example = "Request was successful.")]
     pub msg: String,
     // Data being returned
     pub data: D,
@@ -81,10 +84,12 @@ pub struct RouteError {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
-struct SingleRouteError {
+pub struct SingleRouteError {
     // Human readable error message
+    #[schema(example = "Invalid input in field_name.")]
     pub msg: String,
     // Field name, if error was caused by bad input
+    #[schema(example = "field_name")]
     pub field: Option<String>,
 }
 
