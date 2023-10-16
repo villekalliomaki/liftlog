@@ -1,0 +1,19 @@
+name: Run rustfmt
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    rustfmt:
+        runs-on: rust
+        steps:
+            - uses: actions/checkout@v2
+            - name: Install rustfmt
+              working-directory: ./server
+              run: |
+                  rustup component add rustfmt
+            - name: Run rustfmt
+              working-directory: ./server
+              run: |
+                  rustfmt --all -- --check
