@@ -4,7 +4,7 @@ FROM rust:latest AS builder
 
 # Postgresql must be rechable during compilation
 # Used for type checking
-ARG DATABASE_URL=postgresql://postgres:postgres@localhost/liftlog
+ARG DATABASE_URL=postgresql://postgres:postgres@postgres/liftlog
 
 RUN rustup target add x86_64-unknown-linux-musl
 RUN apt update && apt install -y musl-tools musl-dev
