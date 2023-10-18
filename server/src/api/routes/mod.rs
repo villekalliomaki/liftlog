@@ -37,12 +37,13 @@ pub fn build_router(pool: PgPool) -> Router {
             user::get_self,
             user::delete_user,
             user::change_username,
+            user::change_password,
         ),
         modifiers(&SecurityAddon),
         tags(
             (name = "Liftlog", description = "Web application to record exercise sets and repetitions.")
         ),
-        components(schemas(RouteSuccessString, SingleRouteError, RouteError, models::access_token::AccessToken, models::user::User, routes::user::CreateUserInput, routes::user::ChangeUsernameInput, routes::access_token::CreateAccessTokenInput))
+        components(schemas(RouteSuccessString, SingleRouteError, RouteError, models::access_token::AccessToken, models::user::User, routes::user::CreateUserInput, routes::user::ChangeUsernameInput, routes::user::ChangePasswordInput, routes::access_token::CreateAccessTokenInput))
     )]
     struct ApiDoc;
 
@@ -70,7 +71,8 @@ pub fn build_router(pool: PgPool) -> Router {
                 .post(user::create_user)
                 .delete(user::delete_user),
         )
-        .route("/api/user/username", patch(user::delete_user))
+        .route("/api/user/username", patch(user::change_username))
+        .route("/api/user/password", patch(user::change_password))
         .route("/api/access_token", post(access_token::create_access_token))
         .route(
             "/api/access_token/:token",

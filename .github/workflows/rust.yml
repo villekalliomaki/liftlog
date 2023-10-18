@@ -14,7 +14,6 @@ env:
 
 jobs:
     test:
-        name: Test
         services:
             postgres:
                 image: postgres
@@ -42,3 +41,31 @@ jobs:
               working-directory: ./server
               run: |
                   cargo test
+    build:
+        services:
+            postgres:
+                image: postgres
+                ports:
+                    - 5432:5432
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: liftlog
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        runs-on: rust
+        steps:
+            - uses: actions/checkout@v2
+            - name: Migrate database
+              working-directory: ./server
+              run: |
+                  cargo install sqlx-cli --features=postgres
+                  sqlx database create
+                  sqlx migrate run
+            - name: Run tests
+              working-directory: ./server
+              run: |
+                  cargo build --release
