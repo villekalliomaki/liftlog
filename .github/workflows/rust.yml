@@ -9,16 +9,15 @@ on:
 env:
     CARGO_TERM_COLOR: always
     LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
-    LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
     DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
+    LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
 
 jobs:
     test:
+        runs-on: ubuntu-latest
         services:
             postgres:
                 image: postgres
-                ports:
-                    - 5432:5432
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
@@ -28,13 +27,12 @@ jobs:
                     --health-interval 10s
                     --health-timeout 5s
                     --health-retries 5
-        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
             - name: Migrate database
               working-directory: ./server
               run: |
-                  cargo install sqlx-cli --features=postgres
+                  cargo install sqlx-cli --no-default-features --features=postgres
                   sqlx database create
                   sqlx migrate run
             - name: Run tests
@@ -42,11 +40,10 @@ jobs:
               run: |
                   cargo test
     build:
+        runs-on: ubuntu-latest
         services:
             postgres:
                 image: postgres
-                ports:
-                    - 5432:5432
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
@@ -56,13 +53,12 @@ jobs:
                     --health-interval 10s
                     --health-timeout 5s
                     --health-retries 5
-        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
             - name: Migrate database
               working-directory: ./server
               run: |
-                  cargo install sqlx-cli --features=postgres
+                  cargo install sqlx-cli --no-default-features --features=postgres
                   sqlx database create
                   sqlx migrate run
             - name: Run tests
