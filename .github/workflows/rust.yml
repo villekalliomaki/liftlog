@@ -56,7 +56,6 @@ jobs:
                   username: ${{ secrets.DOCKERHUB_USERNAME }}
                   password: ${{ secrets.DOCKERHUB_TOKEN }}
             - name: Build and push
-              working-directory: ./server
               uses: docker/build-push-action@v5
               with:
                   push: true
