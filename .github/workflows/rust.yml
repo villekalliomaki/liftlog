@@ -13,7 +13,7 @@ env:
     LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
 
 jobs:
-    build:
+    test:
         runs-on: ubuntu-latest
         container: rust:latest
         services:
@@ -50,6 +50,23 @@ jobs:
                   name: liftlog_server
                   path: ./server/target/release/liftlog_server
                   retention-days: 30
+    build:
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres
+                ports:
+                    - 5432:5432
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: liftlog
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        steps:
             - name: Login to Docker Hub
               uses: docker/login-action@v3
               with:
