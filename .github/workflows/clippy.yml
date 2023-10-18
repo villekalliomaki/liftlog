@@ -1,4 +1,4 @@
-name: Run rustfmt
+name: Run clippy
 
 on:
     push:
@@ -9,11 +9,11 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-            - name: Install rustfmt
+            - name: Install clippy
               working-directory: ./server
               run: |
-                  rustup component add rustfmt
-            - name: Run rustfmt
+                  rustup component add clippy
+            - name: Run clippy
               working-directory: ./server
               run: |
-                  rustfmt --all -- --check
+                  cargo clippy
