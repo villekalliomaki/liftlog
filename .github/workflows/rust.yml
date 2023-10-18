@@ -65,6 +65,16 @@ jobs:
                     --health-timeout 5s
                     --health-retries 5
         steps:
+            - name: Migrate database
+              working-directory: ./server
+              run: |
+                  cargo install sqlx-cli --no-default-features --features=postgres
+                  sqlx database create
+                  sqlx migrate run
+            - name: Generate sqlx offline data
+              working-directory: ./server
+              run: |
+                  SQLX_OFFLINE=true sqlx prepare
             - name: Login to Docker Hub
               uses: docker/login-action@v3
               with:
