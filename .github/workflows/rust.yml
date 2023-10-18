@@ -13,33 +13,6 @@ env:
     LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
 
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        container: rust:latest
-        services:
-            postgres:
-                image: postgres
-                env:
-                    POSTGRES_USER: postgres
-                    POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: liftlog
-                options: >-
-                    --health-cmd pg_isready
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
-        steps:
-            - uses: actions/checkout@v2
-            - name: Migrate database
-              working-directory: ./server
-              run: |
-                  cargo install sqlx-cli --no-default-features --features=postgres
-                  sqlx database create
-                  sqlx migrate run
-            - name: Run tests
-              working-directory: ./server
-              run: |
-                  cargo test
     build:
         runs-on: ubuntu-latest
         container: rust:latest
@@ -66,4 +39,24 @@ jobs:
             - name: Run tests
               working-directory: ./server
               run: |
+                  cargo test
+            - name: Build release binary
+              working-directory: ./server
+              run: |
                   cargo build --release
+            - name: "Upload release binary"
+              uses: actions/upload-artifact@v3
+              with:
+                  name: my-artifact
+                  path: ./server/target/release/liftlog_server
+                  retention-days: 30
+            - name: Login to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+            - name: Build and push
+              uses: docker/build-push-action@v5
+              with:
+                  push: true
+                  tags: user/app:latest
