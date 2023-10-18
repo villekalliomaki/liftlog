@@ -22,7 +22,7 @@ RUN adduser \
 
 WORKDIR /liftlog_server
 
-COPY ./ .
+COPY ./server .
 
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
