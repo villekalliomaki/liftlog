@@ -47,7 +47,7 @@ jobs:
             - name: "Upload release binary"
               uses: actions/upload-artifact@v3
               with:
-                  name: my-artifact
+                  name: liftlog_server
                   path: ./server/target/release/liftlog_server
                   retention-days: 30
             - name: Login to Docker Hub
