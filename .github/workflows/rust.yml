@@ -56,11 +56,14 @@ jobs:
         runs-on: ubuntu-latest
         env:
             # localhost on host machine
-            LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@localhost/liftlog"
-            DATABASE_URL: "postgresql://postgres:postgres@localhost/liftlog"
+            LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1/liftlog"
+            DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1/liftlog"
         services:
             postgres:
                 image: postgres
+                # Because built is done on the host, service port has to be mapped
+                ports:
+                    5432:5432
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
