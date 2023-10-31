@@ -10,6 +10,9 @@ RUN update-ca-certificates
 ENV USER=liftlog_server
 ENV UID=1000
 
+# Force sqlx offline mode
+ENV SQLX_OFFLINE=true
+
 RUN adduser \
     --disabled-password \
     --gecos "" \
