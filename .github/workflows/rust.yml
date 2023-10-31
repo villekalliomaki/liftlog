@@ -91,7 +91,7 @@ jobs:
             - name: Generate sqlx offline data
               working-directory: ./server
               run: |
-                  SQLX_OFFLINE=true sqlx prepare
+                  cargo sqlx prepare
             - name: Login to Docker Hub
               uses: docker/login-action@v3
               with:
