@@ -8,13 +8,15 @@ on:
 
 env:
     CARGO_TERM_COLOR: always
-    LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
-    DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
     LIFTLOG_LISTEN_ADDRESS: "127.0.0.1:3000"
 
 jobs:
-    test:
+    binary:
         runs-on: ubuntu-latest
+        env:
+            # container host in a container
+            LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
+            DATABASE_URL: "postgresql://postgres:postgres@postgres/liftlog"
         container: rust:latest
         services:
             postgres:
@@ -50,8 +52,12 @@ jobs:
                   name: liftlog_server
                   path: ./server/target/release/liftlog_server
                   retention-days: 30
-    build:
+    container:
         runs-on: ubuntu-latest
+        env:
+            # localhost on host machine
+            LIFTLOG_DATABASE_URL: "postgresql://postgres:postgres@localhost/liftlog"
+            DATABASE_URL: "postgresql://postgres:postgres@localhost/liftlog"
         services:
             postgres:
                 image: postgres
@@ -75,6 +81,10 @@ jobs:
                   cargo install sqlx-cli --no-default-features --features=postgres
                   sqlx database create
                   sqlx migrate run
+            - name: Run tests
+              working-directory: ./server
+              run: |
+                  cargo test
             - name: Generate sqlx offline data
               working-directory: ./server
               run: |
