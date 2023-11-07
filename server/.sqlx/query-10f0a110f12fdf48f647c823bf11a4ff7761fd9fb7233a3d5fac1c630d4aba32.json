@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET password_hash = $1, changed = NOW() WHERE id = $2 RETURNING changed, password_hash",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "changed",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "password_hash",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "10f0a110f12fdf48f647c823bf11a4ff7761fd9fb7233a3d5fac1c630d4aba32"
+}
