@@ -28,4 +28,10 @@ For sqlx migrations and generating them, the sqlx-cli tool is needed. Install (o
 
 ## API documentation
 
-An OpenAPI spec is generated automatically with [utoipa](https://docs.rs/utoipa/latest/utoipa/). It's served from `/api-docs/openapi.json`, and can be viewed with `/swagger-ui`, `/redoc` and `/rapidoc`.
+An OpenAPI spec is generated automatically with [utoipa](https://docs.rs/utoipa/latest/utoipa/).
+
+For a local instance:
+- [Swagger UI](http://127.0.0.1:3000/docs/swagger_ui/)
+- [Redoc](http://127.0.0.1:3000/docs/redoc)
+- [Rapidoc](http://127.0.0.1:3000/docs/rapidoc)
+- [Plain OpenAPI spec](http://127.0.0.1:3000/docs/spec/openapi.json)

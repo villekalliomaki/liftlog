@@ -64,6 +64,8 @@ impl User {
         .fetch_one(pool)
         .await?;
 
+        info!("New user '{}' created", new_user.username);
+
         Ok(new_user)
     }
 

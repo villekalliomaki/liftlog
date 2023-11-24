@@ -43,7 +43,17 @@ pub fn build_router(pool: PgPool) -> Router {
         tags(
             (name = "Liftlog", description = "Web application to record exercise sets and repetitions.")
         ),
-        components(schemas(RouteSuccessString, SingleRouteError, RouteError, models::access_token::AccessToken, models::user::User, routes::user::CreateUserInput, routes::user::ChangeUsernameInput, routes::user::ChangePasswordInput, routes::access_token::CreateAccessTokenInput))
+        components(schemas(
+            RouteSuccessString,
+            SingleRouteError,
+            RouteError,
+            models::access_token::AccessToken,
+            models::user::User,
+            routes::user::CreateUserInput,
+            routes::user::ChangeUsernameInput,
+            routes::user::ChangePasswordInput,
+            routes::access_token::CreateAccessTokenInput
+        ))
     )]
     struct ApiDoc;
 
@@ -60,23 +70,29 @@ pub fn build_router(pool: PgPool) -> Router {
         }
     }
 
-    Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
-        .merge(Redoc::with_url("/redoc", ApiDoc::openapi()))
-        .merge(RapiDoc::new("/api-docs/openapi.json").path("/rapidoc"))
-        .route("/api/ping", get(ping::handle))
+    let user_router = Router::new()
         .route(
-            "/api/user",
+            "/",
             get(user::get_self)
                 .post(user::create_user)
                 .delete(user::delete_user),
         )
-        .route("/api/user/username", patch(user::change_username))
-        .route("/api/user/password", patch(user::change_password))
-        .route("/api/access_token", post(access_token::create_access_token))
-        .route(
-            "/api/access_token/:token",
-            delete(access_token::delete_token),
-        )
+        .route("/username", patch(user::change_username))
+        .route("/password", patch(user::change_password));
+
+    let access_token_router = Router::new()
+        .route("/", post(access_token::create_access_token))
+        .route("/:token", delete(access_token::delete_token));
+
+    let api_router = Router::new()
+        .route("/ping", get(ping::handle))
+        .nest("/user", user_router)
+        .nest("/access_token", access_token_router);
+
+    Router::new()
+        .merge(SwaggerUi::new("/docs/swagger_ui").url("/docs/spec/openapi.json", ApiDoc::openapi()))
+        .merge(Redoc::with_url("/docs/redoc", ApiDoc::openapi()))
+        .merge(RapiDoc::new("/docs/spec/openapi.json").path("/docs/rapidoc"))
+        .nest("/api", api_router)
         .with_state(pool)
 }
