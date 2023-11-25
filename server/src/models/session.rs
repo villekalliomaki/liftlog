@@ -1,3 +1,8 @@
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
+
+use super::exercise_instance::ExerciseInstance;
+
 // A single session which can be empty of filled based on a template.
 // Can be in progess or finished.
 pub struct Session {
@@ -13,6 +18,6 @@ pub struct Session {
     pub started: DateTime<Utc>,
     // When it was finished
     pub finished: Option<DateTime<Utc>>,
-    // Session exercises
-    pub session_exercises: Vec,
+    // Instances of predefined exercised, contains the kind, sets, reps, weight and more
+    pub exercise_instances: Vec<ExerciseInstance>,
 }
