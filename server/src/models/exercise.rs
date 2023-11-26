@@ -1,7 +1,9 @@
 use std::fmt::{Debug, Display};
 
+use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use tracing::{debug, info};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -29,8 +31,9 @@ pub struct Exercise {
     pub kind: ExerciseKind,
 }
 
-// Used to categorize exercises and to define which way performance is measured in sets.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+// Used to categorize exercises
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, sqlx::Type)]
+#[sqlx(type_name = "exercise_kind", rename_all = "UPPERCASE")]
 pub enum ExerciseKind {
     Dumbbell,
     Barbell,
@@ -41,7 +44,7 @@ pub enum ExerciseKind {
 
 impl Exercise {
     // Creates a new exercise for the given user
-    async fn new(
+    pub async fn new(
         user_id: Uuid,
         name: impl ToString + Display + Debug,
         description: Option<impl ToString + Display + Debug>,
@@ -50,47 +53,138 @@ impl Exercise {
         kind: ExerciseKind,
         pool: &PgPool,
     ) -> Result<Exercise, RouteError> {
-        todo!();
+        info!("Creating a new exercise '{}' for user '{}'", name, user_id);
+
+        Ok(sqlx::query_as!(
+            Exercise,
+            r#"
+            INSERT INTO exercises (user_id, name, description, favourite, notes, kind)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, user_id, name, description, favourite, notes, kind AS "kind: ExerciseKind"
+            "#,
+            user_id,
+            name.to_string(),
+            description.map_or(None, |i| Some(i.to_string())),
+            favourite,
+            notes.map_or(None, |i| Some(i.to_string())),
+            kind as _
+        )
+        .fetch_one(pool)
+        .await?)
     }
 
     // Get an exercise from IDs
-    async fn from_id(
+    pub async fn from_id(
         user_id: Uuid,
         exercise_id: Uuid,
         pool: &PgPool,
     ) -> Result<Exercise, RouteError> {
-        todo!();
+        debug!("Querying exercise {} of user {}", exercise_id, user_id);
+
+        Ok(sqlx::query_as!(
+            Exercise,
+            r#"
+            SELECT id, user_id, name, description, favourite, notes, kind AS "kind: ExerciseKind"
+            FROM exercises WHERE user_id = $1 AND id = $2 LIMIT 1
+            "#,
+            user_id,
+            exercise_id
+        )
+        .fetch_one(pool)
+        .await?)
     }
 
     // Deletes self
-    async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
-        todo!();
+    pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
+        info!("Deleting exercise {}", self.id);
+
+        let res = sqlx::query!(
+            "DELETE FROM exercises WHERE user_id = $1 AND id = $2",
+            self.user_id,
+            self.id
+        )
+        .execute(pool)
+        .await?;
+
+        if res.rows_affected() == 1 {
+            Ok(self.id)
+        } else {
+            Err(RouteError::new(
+                "Exercise not fould, so nothing was deleted.",
+                None::<&str>,
+                StatusCode::NOT_FOUND,
+            ))
+        }
     }
 
     // Enable favourite state
-    async fn enable_favourite(&mut self, pool: &PgPool) -> Result<(), RouteError> {
-        todo!();
+    pub async fn enable_favourite(&mut self, pool: &PgPool) -> Result<(), RouteError> {
+        self.set_favourite_state(true, pool).await
     }
 
     // Disable favourite state
-    async fn disable_favourite(&mut self, pool: &PgPool) -> Result<(), RouteError> {
-        todo!();
+    pub async fn disable_favourite(&mut self, pool: &PgPool) -> Result<(), RouteError> {
+        self.set_favourite_state(false, pool).await
     }
 
-    // Change all the text fields
-    async fn change_fields(
+    // Helped to toggle favourite state
+    async fn set_favourite_state(
+        &mut self,
+        favorite: bool,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        let favourite_updated = sqlx::query!(
+            "UPDATE exercises SET favourite = $1 WHERE id = $2 AND user_id = $3 RETURNING favourite",
+            favorite,
+            self.id,
+            self.user_id
+        ).fetch_one(pool).await?;
+
+        self.favourite = favourite_updated.favourite;
+
+        Ok(())
+    }
+
+    // Change all the text fields (overwrites all of them)
+    pub async fn change_fields(
         &mut self,
         new_name: impl ToString + Display + Debug,
         new_description: Option<impl ToString + Display + Debug>,
         new_notes: Option<impl ToString + Display + Debug>,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        todo!();
+        let fields_updated = sqlx::query!(
+            "UPDATE exercises SET name = $1, description = $2, notes = $3 WHERE id = $4 AND user_id = $5 RETURNING name, description, notes",
+            new_name.to_string(),
+            new_description.map_or(None, |i| Some(i.to_string())),
+            new_notes.map_or(None, |i| Some(i.to_string())),
+            self.id,
+            self.user_id
+        ).fetch_one(pool).await?;
+
+        self.name = fields_updated.name;
+        self.description = fields_updated.description;
+        self.notes = fields_updated.notes;
+
+        Ok(())
     }
 
-    // Change all the text fields
-    async fn set_kind(&mut self, new_kind: ExerciseKind, pool: &PgPool) -> Result<(), RouteError> {
-        todo!();
+    // Change what kind of exercise this is
+    pub async fn set_kind(
+        &mut self,
+        new_kind: ExerciseKind,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        let kind_updated = sqlx::query!(
+            r#"UPDATE exercises SET kind = $1 WHERE id = $2 AND user_id = $3 RETURNING kind AS "kind: ExerciseKind""#,
+            new_kind as _,
+            self.id,
+            self.user_id
+        ).fetch_one(pool).await?;
+
+        self.kind = kind_updated.kind;
+
+        Ok(())
     }
 }
 
@@ -152,7 +246,7 @@ mod tests {
 
     #[sqlx::test]
     async fn user_ownership(pool: PgPool) {
-        let (user, new_exercise) = create_user_and_exercise(&pool).await;
+        let (_, new_exercise) = create_user_and_exercise(&pool).await;
 
         // Try to find it with the wrong user id
         let same_new_exercise_result =
@@ -164,7 +258,7 @@ mod tests {
 
     #[sqlx::test]
     async fn set_as_favouite(pool: PgPool) {
-        let (user, mut new_exercise) = create_user_and_exercise(&pool).await;
+        let (_, mut new_exercise) = create_user_and_exercise(&pool).await;
 
         // Enable
         new_exercise.enable_favourite(&pool).await.unwrap();

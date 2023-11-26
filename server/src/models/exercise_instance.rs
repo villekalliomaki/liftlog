@@ -35,7 +35,7 @@ pub struct Set {
     // An exercise instance is bound to an exercise instance
     pub exercise_instance_id: Uuid,
     // The weight used in kilograms, can be negative to signify an assisted lift
-    pub weight: isize,
+    pub weight: f64,
     // The reps are 0 or more
     pub reps: usize,
 }
