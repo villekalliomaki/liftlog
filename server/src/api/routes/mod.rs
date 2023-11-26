@@ -1,4 +1,5 @@
 mod access_token;
+mod exercise;
 mod ping;
 mod user;
 
@@ -49,6 +50,8 @@ pub fn build_router(pool: PgPool) -> Router {
             RouteError,
             models::access_token::AccessToken,
             models::user::User,
+            models::exercise::Exercise,
+            models::exercise::ExerciseKind,
             routes::user::CreateUserInput,
             routes::user::ChangeUsernameInput,
             routes::user::ChangePasswordInput,
