@@ -1,3 +1,4 @@
+use axum::http::{HeaderName, HeaderValue};
 use axum_test::TestServer;
 use sqlx::PgPool;
 
@@ -20,4 +21,11 @@ pub async fn create_test_app(pool: PgPool) -> (TestServer, User, AccessToken) {
     let server = test_server(pool);
 
     (server, user_and_token.0, user_and_token.1)
+}
+
+pub fn get_auth_header(access_token: &AccessToken) -> (HeaderName, HeaderValue) {
+    (
+        HeaderName::from_static("authorization"),
+        HeaderValue::from_bytes(format!("Bearer {}", access_token.token).as_bytes()).unwrap(),
+    )
 }
