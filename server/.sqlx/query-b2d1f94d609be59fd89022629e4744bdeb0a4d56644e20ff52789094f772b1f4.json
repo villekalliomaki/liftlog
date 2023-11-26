@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE exercises SET favourite = $1 WHERE id = $2 AND user_id = $3 RETURNING favourite",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "favourite",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b2d1f94d609be59fd89022629e4744bdeb0a4d56644e20ff52789094f772b1f4"
+}
