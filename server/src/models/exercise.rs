@@ -145,44 +145,75 @@ impl Exercise {
         Ok(())
     }
 
-    // Change all the text fields (overwrites all of them)
-    pub async fn change_fields(
-        &mut self,
-        new_name: impl ToString + Display + Debug,
-        new_description: Option<impl ToString + Display + Debug>,
-        new_notes: Option<impl ToString + Display + Debug>,
-        pool: &PgPool,
-    ) -> Result<(), RouteError> {
-        let fields_updated = sqlx::query!(
-            "UPDATE exercises SET name = $1, description = $2, notes = $3 WHERE id = $4 AND user_id = $5 RETURNING name, description, notes",
-            new_name.to_string(),
-            new_description.map_or(None, |i| Some(i.to_string())),
-            new_notes.map_or(None, |i| Some(i.to_string())),
-            self.id,
-            self.user_id
-        ).fetch_one(pool).await?;
-
-        self.name = fields_updated.name;
-        self.description = fields_updated.description;
-        self.notes = fields_updated.notes;
-
-        Ok(())
-    }
-
     // Change what kind of exercise this is
     pub async fn set_kind(
         &mut self,
         new_kind: ExerciseKind,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        let kind_updated = sqlx::query!(
+        self.kind = sqlx::query!(
             r#"UPDATE exercises SET kind = $1 WHERE id = $2 AND user_id = $3 RETURNING kind AS "kind: ExerciseKind""#,
             new_kind as _,
             self.id,
             self.user_id
-        ).fetch_one(pool).await?;
+        ).fetch_one(pool).await?.kind;
 
-        self.kind = kind_updated.kind;
+        Ok(())
+    }
+
+    // Change the name, overwrites to null if set to None
+    pub async fn set_name(
+        &mut self,
+        new_name: impl ToString + Display + Debug,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        self.name = sqlx::query!(
+            "UPDATE exercises SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING name",
+            new_name.to_string(),
+            self.id,
+            self.user_id
+        )
+        .fetch_one(pool)
+        .await?
+        .name;
+
+        Ok(())
+    }
+
+    // Change the description, overwrites to null if set to None
+    pub async fn set_description(
+        &mut self,
+        new_description: Option<impl ToString + Display + Debug>,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        self.description = sqlx::query!(
+            "UPDATE exercises SET description = $1 WHERE id = $2 AND user_id = $3 RETURNING description",
+            new_description.map_or(None, |i| Some(i.to_string())),
+            self.id,
+            self.user_id
+        )
+        .fetch_one(pool)
+        .await?
+        .description;
+
+        Ok(())
+    }
+
+    // Change the notes, overwrites to null if set to None
+    pub async fn set_notes(
+        &mut self,
+        new_notes: Option<impl ToString + Display + Debug>,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        self.notes = sqlx::query!(
+            "UPDATE exercises SET notes = $1 WHERE id = $2 AND user_id = $3 RETURNING notes",
+            new_notes.map_or(None, |i| Some(i.to_string())),
+            self.id,
+            self.user_id
+        )
+        .fetch_one(pool)
+        .await?
+        .notes;
 
         Ok(())
     }
@@ -276,14 +307,16 @@ mod tests {
         let (user, mut new_exercise) = create_user_and_exercise(&pool).await;
 
         let new_name = "Squat";
-        let new_desciption = None::<&str>;
+        let new_description = None::<&str>;
         let new_notes = Some("something else");
 
         // Do the changes
+        new_exercise.set_name(new_name, &pool).await.unwrap();
         new_exercise
-            .change_fields(new_name, new_desciption, new_notes, &pool)
+            .set_description(new_description, &pool)
             .await
             .unwrap();
+        new_exercise.set_notes(new_notes, &pool).await.unwrap();
 
         // Get the same exercise from db
         let same_new_exercise: Exercise = Exercise::from_id(user.id, new_exercise.id, &pool)

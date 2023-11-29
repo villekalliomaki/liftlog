@@ -1,3 +1,173 @@
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
+use serde::{Deserialize, Deserializer};
+use sqlx::PgPool;
+use utoipa::ToSchema;
+use uuid::Uuid;
+use validator::Validate;
+
+use crate::{
+    api::response::{RouteResponse, RouteSuccess},
+    models::{
+        exercise::{Exercise, ExerciseKind},
+        user::User,
+    },
+};
+
+// For serde...
+fn default_as_false() -> bool {
+    false
+}
+
+// Used for nested options: https://github.com/serde-rs/serde/issues/904
+// Only way to have optional fields, which differentiate between the field being missing
+// and being set to null js JSON
+fn deserialize_optional_option<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
+
+#[derive(Debug, Validate, Deserialize, ToSchema)]
+pub struct CreateExerciseInput {
+    #[validate(length(min = 1, max = 30, message = "must be between 1 and 30 characters"))]
+    name: String,
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "must be between 1 and 10000 characters"
+    ))]
+    description: Option<String>,
+    #[serde(default = "default_as_false")]
+    favourite: bool,
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "must be between 1 and 10000 characters"
+    ))]
+    notes: Option<String>,
+    kind: ExerciseKind,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/exercise",
+    request_body = CreateExerciseInput,
+    responses(
+        (status = CREATED, description = "New exercise created", body = RouteSuccessExercise),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for exercise", body = RouteError),
+    )
+)]
+pub async fn route_create_exercise(
+    user: User,
+    State(pool): State<PgPool>,
+    Json(body): Json<CreateExerciseInput>,
+) -> RouteResponse<Exercise> {
+    body.validate()?;
+
+    let new_exercise = Exercise::new(
+        user.id,
+        body.name,
+        body.description,
+        body.favourite,
+        body.notes,
+        body.kind,
+        &pool,
+    )
+    .await?;
+
+    Ok(RouteSuccess::new(
+        format!("New exercise '{}' created.", &new_exercise.name),
+        new_exercise,
+        StatusCode::CREATED,
+    ))
+}
+
+// All changes are optional, and if they do not exist in the input JSON
+// they are not changed, meaning nulls can overwrite set values
+#[derive(Debug, Validate, Deserialize, ToSchema)]
+pub struct EditExerciseInput {
+    #[validate(length(min = 1, max = 30, message = "must be between 1 and 30 characters"))]
+    name: Option<String>,
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "must be between 1 and 10000 characters"
+    ))]
+    #[serde(default, deserialize_with = "deserialize_optional_option")]
+    description: Option<Option<String>>,
+    favourite: Option<bool>,
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "must be between 1 and 10000 characters"
+    ))]
+    #[serde(default, deserialize_with = "deserialize_optional_option")]
+    notes: Option<Option<String>>,
+    kind: Option<ExerciseKind>,
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/exercise/{exercise_id}",
+    params(
+        ("id" = Uuid, Path, description = "The ID of the edited exercise")
+    ),
+    request_body = EditExerciseInput,
+    responses(
+        (status = OK, description = "Exercise updated", body = RouteSuccessExercise),
+        (status = NOT_FOUND, description = "Invalid exercise ID", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for exercise", body = RouteError),
+    )
+)]
+pub async fn route_edit_exercise(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_id): Path<Uuid>,
+    Json(body): Json<EditExerciseInput>,
+) -> RouteResponse<Exercise> {
+    body.validate()?;
+
+    let mut exercise = Exercise::from_id(user.id, exercise_id, &pool).await?;
+
+    if let Some(new_name) = body.name {
+        exercise.set_name(new_name, &pool).await?;
+    }
+
+    if let Some(new_description) = body.description {
+        exercise.set_description(new_description, &pool).await?;
+    }
+
+    if let Some(new_favourite) = body.favourite {
+        // This could just set it...
+        if new_favourite {
+            exercise.enable_favourite(&pool).await?;
+        } else {
+            exercise.disable_favourite(&pool).await?;
+        }
+    }
+
+    if let Some(new_notes) = body.notes {
+        exercise.set_notes(new_notes, &pool).await?;
+    }
+
+    if let Some(new_kind) = body.kind {
+        exercise.set_kind(new_kind, &pool).await?;
+    }
+
+    Ok(RouteSuccess::new(
+        "Updated fields.",
+        exercise,
+        StatusCode::OK,
+    ))
+}
 
 #[cfg(test)]
 mod tests {
@@ -50,7 +220,7 @@ mod tests {
             .json(&json!(
                 {
                     "name": "Bench press",
-                    "kind": "barbell"
+                    "kind": "Barbell"
                 }
             ))
             .await
@@ -66,7 +236,7 @@ mod tests {
                     "description": "Flat bench",
                     "notes": "Something ...",
                     "favourite": true,
-                    "kind": "barbell",
+                    "kind": "Barbell",
 
                 }
             ))
@@ -182,7 +352,7 @@ mod tests {
 
         // Note that this is /exercises not /exercise
         let users_exercises = server
-            .get("/api/exercises")
+            .get("/api/exercise/all")
             .add_header(header_name.clone(), header_value.clone())
             .await
             .json::<RouteSuccess<Vec<Exercise>>>();
@@ -203,7 +373,7 @@ mod tests {
             .json(&json!(
                 {
                     "name": "Bench press",
-                    "kind": "barbell"
+                    "kind": "Barbell"
                 }
             ))
             .await
@@ -217,15 +387,14 @@ mod tests {
             .json(&json!(
                 {
                     "name": "Lat pulldown",
-                    "kind": "cable"
+                    "kind": "Cable"
                 }
             ))
             .await
             .assert_status_success();
 
-        // Note that this is /exercises not /exercise
         let users_exercises = server
-            .get("/api/exercises/barbell")
+            .get("/api/exercise/all/barbell")
             .add_header(header_name.clone(), header_value.clone())
             .await
             .json::<RouteSuccess<Vec<Exercise>>>()

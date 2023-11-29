@@ -8,12 +8,12 @@ use tracing::{debug, error, instrument, warn};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::models::{access_token::AccessToken, user::User};
+use crate::models::{access_token::AccessToken, user::User, exercise::Exercise};
 
 // Reponse to a successful API request
 // Status 200 by default
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
-#[aliases(RouteSuccessUuid = RouteSuccess<Uuid>, RouteSuccessString = RouteSuccess<String>, RouteSuccessAccessToken = RouteSuccess<AccessToken>, RouteSuccessUser = RouteSuccess<User>)]
+#[aliases(RouteSuccessUuid = RouteSuccess<Uuid>, RouteSuccessString = RouteSuccess<String>, RouteSuccessAccessToken = RouteSuccess<AccessToken>, RouteSuccessUser = RouteSuccess<User>, RouteSuccessExercise = RouteSuccess<Exercise>)]
 pub struct RouteSuccess<D>
 where
     D: Serialize + Debug,

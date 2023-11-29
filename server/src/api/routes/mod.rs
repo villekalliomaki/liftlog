@@ -39,6 +39,7 @@ pub fn build_router(pool: PgPool) -> Router {
             user::delete_user,
             user::change_username,
             user::change_password,
+            exercise::route_create_exercise,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -55,7 +56,9 @@ pub fn build_router(pool: PgPool) -> Router {
             routes::user::CreateUserInput,
             routes::user::ChangeUsernameInput,
             routes::user::ChangePasswordInput,
-            routes::access_token::CreateAccessTokenInput
+            routes::access_token::CreateAccessTokenInput,
+            routes::exercise::CreateExerciseInput,
+            routes::exercise::EditExerciseInput,
         ))
     )]
     struct ApiDoc;
@@ -87,10 +90,15 @@ pub fn build_router(pool: PgPool) -> Router {
         .route("/", post(access_token::create_access_token))
         .route("/:token", delete(access_token::delete_token));
 
+    let exercise_router = Router::new()
+        .route("/", post(exercise::route_create_exercise))
+        .route("/:exercise_id", patch(exercise::route_edit_exercise));
+
     let api_router = Router::new()
         .route("/ping", get(ping::handle))
         .nest("/user", user_router)
-        .nest("/access_token", access_token_router);
+        .nest("/access_token", access_token_router)
+        .nest("/exercise", exercise_router);
 
     Router::new()
         .merge(SwaggerUi::new("/docs/swagger_ui").url("/docs/spec/openapi.json", ApiDoc::openapi()))
