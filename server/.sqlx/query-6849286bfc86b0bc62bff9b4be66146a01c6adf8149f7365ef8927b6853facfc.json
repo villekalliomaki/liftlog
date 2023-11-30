@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE exercises SET notes = $1 WHERE id = $2 AND user_id = $3 RETURNING notes",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "notes",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6849286bfc86b0bc62bff9b4be66146a01c6adf8149f7365ef8927b6853facfc"
+}

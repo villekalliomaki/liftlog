@@ -39,7 +39,10 @@ pub fn build_router(pool: PgPool) -> Router {
             user::delete_user,
             user::change_username,
             user::change_password,
-            exercise::route_create_exercise,
+            exercise::create_exercise,
+            exercise::edit_exercise,
+            exercise::get_exercise_by_id,
+            exercise::delete_exercise_by_id,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -91,8 +94,10 @@ pub fn build_router(pool: PgPool) -> Router {
         .route("/:token", delete(access_token::delete_token));
 
     let exercise_router = Router::new()
-        .route("/", post(exercise::route_create_exercise))
-        .route("/:exercise_id", patch(exercise::route_edit_exercise));
+        .route("/", post(exercise::create_exercise))
+        .route("/:exercise_id", patch(exercise::edit_exercise))
+        .route("/:exercise_id", get(exercise::get_exercise_by_id))
+        .route("/:exercise_id", delete(exercise::delete_exercise_by_id));
 
     let api_router = Router::new()
         .route("/ping", get(ping::handle))

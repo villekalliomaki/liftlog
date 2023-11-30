@@ -64,7 +64,7 @@ pub struct CreateExerciseInput {
         (status = BAD_REQUEST, description = "Invalid input for exercise", body = RouteError),
     )
 )]
-pub async fn route_create_exercise(
+pub async fn create_exercise(
     user: User,
     State(pool): State<PgPool>,
     Json(body): Json<CreateExerciseInput>,
@@ -124,10 +124,11 @@ pub struct EditExerciseInput {
         (status = OK, description = "Exercise updated", body = RouteSuccessExercise),
         (status = NOT_FOUND, description = "Invalid exercise ID", body = RouteError),
         (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
-        (status = BAD_REQUEST, description = "Invalid input for exercise", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for exercise changes", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid ID format", body = RouteError),
     )
 )]
-pub async fn route_edit_exercise(
+pub async fn edit_exercise(
     user: User,
     State(pool): State<PgPool>,
     Path(exercise_id): Path<Uuid>,
@@ -169,6 +170,59 @@ pub async fn route_edit_exercise(
     ))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/exercise/{exercise_id}",
+    params(
+        ("id" = Uuid, Path, description = "The ID of the exercise requested")
+    ),
+    responses(
+        (status = OK, description = "Exercise found and returned", body = RouteSuccessExercise),
+        (status = NOT_FOUND, description = "Invalid exercise ID", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid ID format", body = RouteError),
+    )
+)]
+pub async fn get_exercise_by_id(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_id): Path<Uuid>,
+) -> RouteResponse<Exercise> {
+    Ok(RouteSuccess::new(
+        "Exercise found.",
+        Exercise::from_id(user.id, exercise_id, &pool).await?,
+        StatusCode::OK,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/exercise/{exercise_id}",
+    params(
+        ("id" = Uuid, Path, description = "The ID of the exercise requested")
+    ),
+    responses(
+        (status = OK, description = "Exercise found and deleted", body = RouteSuccessUuid),
+        (status = NOT_FOUND, description = "Invalid exercise ID", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid ID format", body = RouteError),
+    )
+)]
+pub async fn delete_exercise_by_id(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_id): Path<Uuid>,
+) -> RouteResponse<Uuid> {
+    Ok(RouteSuccess::new(
+        "Exercise deleted.",
+        Exercise::from_id(user.id, exercise_id, &pool)
+            .await?
+            .delete(&pool)
+            .await?,
+        StatusCode::OK,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderName, HeaderValue};
@@ -199,7 +253,7 @@ mod tests {
                     "description": "Flat bench",
                     "notes": "Something ...",
                     "favourite": true,
-                    "kind": "barbell",
+                    "kind": "Barbell",
 
                 }
             ))
@@ -318,7 +372,7 @@ mod tests {
         // Unchanged
         assert_eq!(updated_test_exercise.name, test_exercise.name);
         assert_eq!(updated_test_exercise.notes, test_exercise.notes);
-        assert_eq!(!updated_test_exercise.favourite, test_exercise.favourite);
+        assert_eq!(updated_test_exercise.favourite, test_exercise.favourite);
         assert_eq!(updated_test_exercise.kind, test_exercise.kind);
     }
 
