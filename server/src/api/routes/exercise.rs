@@ -12,7 +12,7 @@ use validator::Validate;
 use crate::{
     api::response::{RouteResponse, RouteSuccess},
     models::{
-        exercise::{Exercise, ExerciseKind},
+        exercise::{all_user_exercises, Exercise, ExerciseKind},
         user::User,
     },
 };
@@ -117,7 +117,7 @@ pub struct EditExerciseInput {
     patch,
     path = "/api/exercise/{exercise_id}",
     params(
-        ("id" = Uuid, Path, description = "The ID of the edited exercise")
+        ("exercise_id" = Uuid, Path, description = "The ID of the edited exercise")
     ),
     request_body = EditExerciseInput,
     responses(
@@ -174,7 +174,7 @@ pub async fn edit_exercise(
     get,
     path = "/api/exercise/{exercise_id}",
     params(
-        ("id" = Uuid, Path, description = "The ID of the exercise requested")
+        ("exercise_id" = Uuid, Path, description = "The ID of the exercise requested")
     ),
     responses(
         (status = OK, description = "Exercise found and returned", body = RouteSuccessExercise),
@@ -199,7 +199,7 @@ pub async fn get_exercise_by_id(
     delete,
     path = "/api/exercise/{exercise_id}",
     params(
-        ("id" = Uuid, Path, description = "The ID of the exercise requested")
+        ("exercise_id" = Uuid, Path, description = "The ID of the exercise requested")
     ),
     responses(
         (status = OK, description = "Exercise found and deleted", body = RouteSuccessUuid),
@@ -219,6 +219,49 @@ pub async fn delete_exercise_by_id(
             .await?
             .delete(&pool)
             .await?,
+        StatusCode::OK,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/exercise/all",
+    responses(
+        (status = OK, description = "Exercises returned", body = RouteSuccessExerciseVec),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+    )
+)]
+pub async fn get_user_exercises(
+    user: User,
+    State(pool): State<PgPool>,
+) -> RouteResponse<Vec<Exercise>> {
+    Ok(RouteSuccess::new(
+        "Returned all exercises for your user.",
+        all_user_exercises(user.id, None, &pool).await?,
+        StatusCode::OK,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/exercise/all/{exercise_kind}",
+    params(
+        ("exercise_kind" = Uuid, Path, description = "The ID of the exercise requested")
+    ),
+    responses(
+        (status = OK, description = "Exercises returned", body = RouteSuccessExerciseVec),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid exercise kind format", body = RouteError),
+    )
+)]
+pub async fn get_user_exercises_by_kind(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_kind): Path<ExerciseKind>,
+) -> RouteResponse<Vec<Exercise>> {
+    Ok(RouteSuccess::new(
+        "Returned all exercises for your user of the specified kind.",
+        all_user_exercises(user.id, Some(exercise_kind), &pool).await?,
         StatusCode::OK,
     ))
 }
@@ -253,7 +296,7 @@ mod tests {
                     "description": "Flat bench",
                     "notes": "Something ...",
                     "favourite": true,
-                    "kind": "Barbell",
+                    "kind": "barbell",
 
                 }
             ))
@@ -274,7 +317,7 @@ mod tests {
             .json(&json!(
                 {
                     "name": "Bench press",
-                    "kind": "Barbell"
+                    "kind": "barbell"
                 }
             ))
             .await
@@ -290,7 +333,7 @@ mod tests {
                     "description": "Flat bench",
                     "notes": "Something ...",
                     "favourite": true,
-                    "kind": "Barbell",
+                    "kind": "barbell",
 
                 }
             ))
@@ -400,7 +443,7 @@ mod tests {
         let (server, _, token) = create_test_app(pool).await;
         let (header_name, header_value) = get_auth_header(&token);
 
-        for _ in 1..20 {
+        for _ in 0..20 {
             create_test_exercise(&server, &header_name, &header_value).await;
         }
 
@@ -427,7 +470,7 @@ mod tests {
             .json(&json!(
                 {
                     "name": "Bench press",
-                    "kind": "Barbell"
+                    "kind": "barbell"
                 }
             ))
             .await
@@ -441,7 +484,7 @@ mod tests {
             .json(&json!(
                 {
                     "name": "Lat pulldown",
-                    "kind": "Cable"
+                    "kind": "cable"
                 }
             ))
             .await

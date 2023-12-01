@@ -43,6 +43,8 @@ pub fn build_router(pool: PgPool) -> Router {
             exercise::edit_exercise,
             exercise::get_exercise_by_id,
             exercise::delete_exercise_by_id,
+            exercise::get_user_exercises,
+            exercise::get_user_exercises_by_kind,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -95,6 +97,11 @@ pub fn build_router(pool: PgPool) -> Router {
 
     let exercise_router = Router::new()
         .route("/", post(exercise::create_exercise))
+        .route("/all", get(exercise::get_user_exercises))
+        .route(
+            "/all/:exercise_kind",
+            get(exercise::get_user_exercises_by_kind),
+        )
         .route("/:exercise_id", patch(exercise::edit_exercise))
         .route("/:exercise_id", get(exercise::get_exercise_by_id))
         .route("/:exercise_id", delete(exercise::delete_exercise_by_id));

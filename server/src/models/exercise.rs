@@ -34,6 +34,7 @@ pub struct Exercise {
 // Used to categorize exercises
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, sqlx::Type)]
 #[sqlx(type_name = "exercise_kind", rename_all = "UPPERCASE")]
+#[serde(rename_all = "lowercase")]
 pub enum ExerciseKind {
     Dumbbell,
     Barbell,
@@ -216,6 +217,31 @@ impl Exercise {
         .notes;
 
         Ok(())
+    }
+}
+
+// Get all the users exercises, if Kind is specified it's included as a filter
+// Not tested here, because this helper is covered by the route tests
+pub async fn all_user_exercises(
+    user_id: Uuid,
+    optional_kind: Option<ExerciseKind>,
+    pool: &PgPool,
+) -> Result<Vec<Exercise>, RouteError> {
+    match optional_kind {
+        Some(kind) => Ok(sqlx::query_as!(
+            Exercise,
+            r#"SELECT id, user_id, name, description, favourite, notes, kind AS "kind: ExerciseKind" FROM exercises WHERE user_id = $1 AND kind = $2"#,
+            user_id,
+            kind as _
+        )
+        .fetch_all(pool)
+        .await?),
+        None => Ok(sqlx::query_as!(
+            Exercise,
+            r#"SELECT id, user_id, name, description, favourite, notes, kind AS "kind: ExerciseKind" FROM exercises WHERE user_id = $1"#,
+            user_id
+        )
+        .fetch_all(pool).await?)
     }
 }
 
