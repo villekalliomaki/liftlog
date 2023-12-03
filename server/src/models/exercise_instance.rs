@@ -164,9 +164,4 @@ mod tests {
 
         assert_eq!(exercise_instance_query.exercise, new_exercise);
     }
-
-    #[sqlx::test]
-    async fn delete_set(pool: PgPool) {
-        todo!();
-    }
 }

@@ -11,7 +11,7 @@ pub struct Set {
     // The weight used in kilograms, can be negative to signify an assisted lift
     pub weight: Option<f64>,
     // The reps are 0 or more
-    pub reps: Option<usize>,
+    pub reps: Option<u64>,
     // When created set is not completed and weight and reps have to be set before
     // marking it as complete
     pub completed: bool,
@@ -21,11 +21,14 @@ pub struct Set {
 mod tests {
     use sqlx::PgPool;
 
-    use crate::models::{
-        exercise::{Exercise, ExerciseKind},
-        exercise_instance::ExerciseInstance,
-        session::Session,
-        user::User,
+    use crate::{
+        models::{
+            exercise::{Exercise, ExerciseKind},
+            exercise_instance::ExerciseInstance,
+            session::Session,
+            user::User,
+        },
+        test_utils::database::test_user,
     };
 
     use super::*;
@@ -66,6 +69,20 @@ mod tests {
         )
     }
 
+    // Helper for querying sets via their instance
+    async fn query_test_sets(
+        user: &User,
+        exercise_instance: &ExerciseInstance,
+        pool: &PgPool,
+    ) -> Vec<Set> {
+        let query: ExerciseInstance =
+            ExerciseInstance::from_id(user.id, exercise_instance.id, pool)
+                .await
+                .unwrap();
+
+        query.sets
+    }
+
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
         let (user, exercise, session, exercise_instance, set) = create_test_set(&pool).await;
@@ -75,13 +92,10 @@ mod tests {
         assert_eq!(set_query, set);
 
         // Queried by an instance, because they are included in it
-        let exercise_instance_query: ExerciseInstance =
-            ExerciseInstance::from_id(user.id, exercise_instance.id, &pool)
-                .await
-                .unwrap();
+        let query_sets = query_test_sets(&user, &exercise_instance, &pool).await;
 
-        assert_eq!(exercise_instance_query.sets.get(0), set);
-        assert_eq!(exercise_instance_query.sets.len(), 1);
+        assert_eq!(query_sets.sets.get(0), set);
+        assert_eq!(query_sets.sets.len(), 1);
     }
 
     #[sqlx::test]
@@ -96,22 +110,70 @@ mod tests {
     }
 
     #[sqlx::test]
-    async fn save_weight(pool: PgPool) {
-        todo!();
+    async fn set_weight(pool: PgPool) {
+        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+
+        let weight: f64 = 40;
+
+        set.set_weight(weight, &pool).await.unwrap();
+
+        assert_eq!(
+            weight,
+            query_test_sets(&user, &exercise_instance, &pool)
+                .await
+                .get(0)
+                .unwrap()
+                .weight
+                .unwrap()
+        );
     }
 
     #[sqlx::test]
-    async fn save_reps(pool: PgPool) {
-        todo!();
+    async fn set_reps(pool: PgPool) {
+        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+
+        let reps: u64 = 14;
+
+        set.set_reps(reps, &pool).await.unwrap();
+
+        assert_eq!(
+            reps,
+            query_test_sets(&user, &exercise_instance, &pool)
+                .await
+                .get(0)
+                .unwrap()
+                .reps
+                .unwrap()
+        );
     }
 
     #[sqlx::test]
     async fn mark_completed(pool: PgPool) {
-        todo!();
+        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+
+        set.set_complete(&pool).await.unwrap();
+
+        assert!(
+            query_test_sets(&user, &exercise_instance, &pool)
+                .await
+                .get(0)
+                .unwrap()
+                .completed
+        );
     }
 
     #[sqlx::test]
     async fn mark_incomplete(pool: PgPool) {
-        todo!();
+        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+
+        set.set_incomplete(&pool).await.unwrap();
+
+        assert!(
+            !query_test_sets(&user, &exercise_instance, &pool)
+                .await
+                .get(0)
+                .unwrap()
+                .completed
+        );
     }
 }
