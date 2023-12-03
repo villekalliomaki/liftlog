@@ -1,6 +1,14 @@
+use serde::{Deserialize, Serialize};
+use sqlx::{pool, PgPool};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
+use crate::api::response::RouteError;
+
+use super::exercise_instance;
+
 // An ExerciseInstance has zero or more of these..
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 pub struct Set {
     // Primary key
     pub id: Uuid,
@@ -15,6 +23,47 @@ pub struct Set {
     // When created set is not completed and weight and reps have to be set before
     // marking it as complete
     pub completed: bool,
+}
+
+impl Set {
+    // Create a new set uncompleted withtout weight or reps set
+    pub async fn new(
+        user_id: Uuid,
+        exercise_instance_id: Uuid,
+        pool: &PgPool,
+    ) -> Result<Self, RouteError> {
+        todo!();
+    }
+
+    // Get from ID and user
+    pub async fn from_id(user_id: Uuid, set_id: Uuid, pool: &PgPool) -> Result<Self, RouteError> {
+        todo!();
+    }
+
+    // Delete set without modifying anythign else
+    pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
+        todo!();
+    }
+
+    pub async fn set_weight(
+        &mut self,
+        weight: Option<f64>,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    pub async fn set_reps(&mut self, reps: Option<u64>, pool: &PgPool) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    pub async fn set_complete(&mut self, pool: &PgPool) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    pub async fn set_incomplete(&mut self, pool: &PgPool) -> Result<(), RouteError> {
+        todo!();
+    }
 }
 
 #[cfg(test)]
@@ -58,7 +107,9 @@ mod tests {
                 .await
                 .unwrap();
 
-        let new_set: Set = Set::new(user.id, new_exercise_instance.id, &pool);
+        let new_set: Set = Set::new(user.id, new_exercise_instance.id, &pool)
+            .await
+            .unwrap();
 
         (
             user,
@@ -85,7 +136,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (user, exercise, session, exercise_instance, set) = create_test_set(&pool).await;
+        let (user, _, _, exercise_instance, set) = create_test_set(&pool).await;
 
         let set_query: Set = Set::from_id(user.id, set.id, &pool).await.unwrap();
 
@@ -94,15 +145,15 @@ mod tests {
         // Queried by an instance, because they are included in it
         let query_sets = query_test_sets(&user, &exercise_instance, &pool).await;
 
-        assert_eq!(query_sets.sets.get(0), set);
-        assert_eq!(query_sets.sets.len(), 1);
+        assert_eq!(query_sets.get(0).unwrap().to_owned(), set);
+        assert_eq!(query_sets.len(), 1);
     }
 
     #[sqlx::test]
     async fn delete(pool: PgPool) {
-        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+        let (user, _, _, _, set) = create_test_set(&pool).await;
 
-        set.delete(&pool).await.unwrap();
+        set.clone().delete(&pool).await.unwrap();
 
         let set_query: Result<Set, RouteError> = Set::from_id(user.id, set.id, &pool).await;
 
@@ -111,9 +162,9 @@ mod tests {
 
     #[sqlx::test]
     async fn set_weight(pool: PgPool) {
-        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+        let (user, _, _, exercise_instance, mut set) = create_test_set(&pool).await;
 
-        let weight: f64 = 40;
+        let weight: Option<f64> = Some(40.0);
 
         set.set_weight(weight, &pool).await.unwrap();
 
@@ -124,15 +175,14 @@ mod tests {
                 .get(0)
                 .unwrap()
                 .weight
-                .unwrap()
         );
     }
 
     #[sqlx::test]
     async fn set_reps(pool: PgPool) {
-        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+        let (user, _, _, exercise_instance, mut set) = create_test_set(&pool).await;
 
-        let reps: u64 = 14;
+        let reps: Option<u64> = Some(14);
 
         set.set_reps(reps, &pool).await.unwrap();
 
@@ -143,13 +193,12 @@ mod tests {
                 .get(0)
                 .unwrap()
                 .reps
-                .unwrap()
         );
     }
 
     #[sqlx::test]
     async fn mark_completed(pool: PgPool) {
-        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+        let (user, _, _, exercise_instance, mut set) = create_test_set(&pool).await;
 
         set.set_complete(&pool).await.unwrap();
 
@@ -164,7 +213,7 @@ mod tests {
 
     #[sqlx::test]
     async fn mark_incomplete(pool: PgPool) {
-        let (user, exercise, session, exercise_instance, mut set) = create_test_set(&pool).await;
+        let (user, _, _, exercise_instance, mut set) = create_test_set(&pool).await;
 
         set.set_incomplete(&pool).await.unwrap();
 

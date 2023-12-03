@@ -1,4 +1,11 @@
+use std::fmt::{Debug, Display};
+
+use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
+
+use crate::api::response::RouteError;
 
 use super::{exercise::Exercise, set::Set};
 
@@ -11,6 +18,7 @@ use super::{exercise::Exercise, set::Set};
 //
 // The sets are ordered, new ones are always added at the end and any of them
 // can be deleted.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 pub struct ExerciseInstance {
     // Primary key
     pub id: Uuid,
@@ -26,6 +34,65 @@ pub struct ExerciseInstance {
     pub comments: Vec<String>,
     // The sets included in the instance (order sensitive and immutable without deleting or adding)
     pub sets: Vec<Set>,
+}
+
+impl ExerciseInstance {
+    // Create a new one with no comments or sets
+    pub async fn new(
+        user_id: Uuid,
+        session_id: Uuid,
+        exercise_id: Uuid,
+        pool: &PgPool,
+    ) -> Result<Self, RouteError> {
+        todo!();
+    }
+
+    // Get existing one by ID and user
+    pub async fn from_id(
+        user_id: Uuid,
+        exercise_instance_id: Uuid,
+        pool: &PgPool,
+    ) -> Result<Self, RouteError> {
+        todo!();
+    }
+
+    // Delete the instance and the sets related to it
+    pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
+        todo!();
+    }
+
+    // Add a comment to the instance, always appended to the list
+    pub async fn add_comment<S: ToString + Display + Debug>(
+        &mut self,
+        comment: S,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    // Overwrite a comment of a specific index if it exists
+    pub async fn set_comment<S: ToString + Display + Debug>(
+        &mut self,
+        index: u64,
+        comment: S,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    // Deleted a comment index if it exists
+    pub async fn delete_comment(&mut self, index: u64, pool: &PgPool) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    // Replaces the exercise with the given one if it exists
+    pub async fn set_exercise(
+        &mut self,
+        exercise_id: Uuid,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        todo!();
+    }
 }
 
 #[cfg(test)]
@@ -72,8 +139,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (user, exercise, session, exercise_instance) =
-            create_test_exercise_instance(&pool).await;
+        let (user, _, session, exercise_instance) = create_test_exercise_instance(&pool).await;
 
         let exercise_instance_query: ExerciseInstance =
             ExerciseInstance::from_id(user.id, exercise_instance.id, &pool)
@@ -85,16 +151,15 @@ mod tests {
         // Query exercise instances from a session
         let query: Session = Session::from_id(user.id, session.id, &pool).await.unwrap();
 
-        assert_eq!(query.exercise_instances.get(0), exercise_instance);
+        assert_eq!(query.exercise_instances.get(0).unwrap(), &exercise_instance);
         assert_eq!(query.exercise_instances.len(), 1);
     }
 
     #[sqlx::test]
     async fn delete(pool: PgPool) {
-        let (user, exercise, session, mut exercise_instance) =
-            create_test_exercise_instance(&pool).await;
+        let (user, _, _, exercise_instance) = create_test_exercise_instance(&pool).await;
 
-        exercise_instance.delete(&pool).await.unwrap();
+        exercise_instance.clone().delete(&pool).await.unwrap();
 
         let exercise_instance_query: Result<ExerciseInstance, RouteError> =
             ExerciseInstance::from_id(user.id, exercise_instance.id, &pool).await;
@@ -104,8 +169,7 @@ mod tests {
 
     #[sqlx::test]
     async fn edit_comments(pool: PgPool) {
-        let (user, exercise, session, mut exercise_instance) =
-            create_test_exercise_instance(&pool).await;
+        let (user, _, _, mut exercise_instance) = create_test_exercise_instance(&pool).await;
 
         exercise_instance
             .add_comment("Comment 1", &pool)
@@ -125,20 +189,21 @@ mod tests {
         // Delete comment 1
         exercise_instance.delete_comment(0, &pool).await.unwrap();
 
-        let exercise_instance_query: Result<ExerciseInstance, RouteError> =
-            ExerciseInstance::from_id(user.id, exercise_instance.id, &pool).await;
+        let exercise_instance_query =
+            ExerciseInstance::from_id(user.id, exercise_instance.id, &pool)
+                .await
+                .unwrap();
 
-        assert_eq!(exercise_instance.comments.len(), 1);
+        assert_eq!(exercise_instance_query.comments.len(), 1);
         assert_eq!(
-            exercise_instance.comments.get(0).unwrap(),
+            exercise_instance_query.comments.get(0).unwrap(),
             &"Comment 3".to_string()
         );
     }
 
     #[sqlx::test]
     async fn change_exercise(pool: PgPool) {
-        let (user, exercise, session, mut exercise_instance) =
-            create_test_exercise_instance(&pool).await;
+        let (user, _, _, mut exercise_instance) = create_test_exercise_instance(&pool).await;
 
         let new_exercise = Exercise::new(
             user.id,
