@@ -26,6 +26,8 @@ Development database can be brought up with `docker-compose up -d`. Because the 
 
 For sqlx migrations and generating them, the sqlx-cli tool is needed. Install (or update) it with `cargo install sqlx-cli`. To connect to the database: `psql "postgresql://postgres:postgres@127.0.0.1/liftlog"`.
 
+To clean database, use this after connecting to it with the above command: `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`.
+
 ## API documentation
 
 An OpenAPI spec is generated automatically with [utoipa](https://docs.rs/utoipa/latest/utoipa/).
