@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{prelude::FromRow, PgPool};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -18,7 +18,7 @@ use super::{exercise::Exercise, set::Set};
 //
 // The sets are ordered, new ones are always added at the end and any of them
 // can be deleted.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, FromRow)]
 pub struct ExerciseInstance {
     // Primary key
     pub id: Uuid,
@@ -95,13 +95,27 @@ impl ExerciseInstance {
     }
 }
 
+// Helper to get all exercise instances linked to an user and a session
+// (also gets all sets with a helper function in the sets module)
+pub async fn all_from_session_id(
+    user_id: Uuid,
+    session_id: Uuid,
+    pool: &PgPool,
+) -> Result<Vec<ExerciseInstance>, RouteError> {
+    todo!();
+}
+
 #[cfg(test)]
 mod tests {
     use sqlx::PgPool;
 
     use crate::{
         api::response::RouteError,
-        models::{exercise::ExerciseKind, session::Session, user::User},
+        models::{
+            exercise::{self, ExerciseKind},
+            session::Session,
+            user::User,
+        },
         test_utils::database::test_user,
     };
 
@@ -228,5 +242,23 @@ mod tests {
                 .unwrap();
 
         assert_eq!(exercise_instance_query.exercise, new_exercise);
+    }
+
+    #[sqlx::test]
+    async fn get_all_from_session_id(pool: PgPool) {
+        let (user, exercise, session, _) = create_test_exercise_instance(&pool).await;
+
+        // Add some instances
+        for _ in 0..10 {
+            ExerciseInstance::new(user.id, session.id, exercise.id, &pool)
+                .await
+                .unwrap();
+        }
+
+        let instances = all_from_session_id(user.id, session.id, &pool)
+            .await
+            .unwrap();
+
+        assert_eq!(instances.len(), 10);
     }
 }

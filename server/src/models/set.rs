@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{pool, PgPool};
+use sqlx::{pool, prelude::FromRow, PgPool};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -8,7 +8,7 @@ use crate::api::response::RouteError;
 use super::exercise_instance;
 
 // An ExerciseInstance has zero or more of these..
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, FromRow)]
 pub struct Set {
     // Primary key
     pub id: Uuid,

@@ -2,16 +2,16 @@ use std::fmt::{Debug, Display};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{prelude::FromRow, PgPool};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::api::response::RouteError;
 
-use super::exercise_instance::ExerciseInstance;
+use super::exercise_instance::{self, ExerciseInstance};
 
 // A single session, can be in progess or finished.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, FromRow)]
 pub struct Session {
     // Primary key
     pub id: Uuid,
@@ -26,6 +26,7 @@ pub struct Session {
     // When it was finished
     pub finished: Option<DateTime<Utc>>,
     // Instances of predefined exercised, contains the kind, sets, reps, weight and more
+    #[sqlx(skip)]
     pub exercise_instances: Vec<ExerciseInstance>,
 }
 
@@ -38,7 +39,14 @@ impl Session {
         description: Option<impl ToString + Display + Debug>,
         pool: &PgPool,
     ) -> Result<Self, RouteError> {
-        todo!();
+        Ok(sqlx::query_as(
+            "INSERT INTO sessions (user_id, name, description) VALUES ($1, $2, $3) RETURNING *;",
+        )
+        .bind(user_id)
+        .bind(name.to_string())
+        .bind(description.map_or(None, |i| Some(i.to_string())))
+        .fetch_one(pool)
+        .await?)
     }
 
     // Overwrites the name
@@ -47,7 +55,19 @@ impl Session {
         name: S,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        todo!();
+        let name_string = name.to_string();
+
+        sqlx::query!(
+            "UPDATE sessions SET name = $1 WHERE id = $2 RETURNING name;",
+            name_string,
+            self.id,
+        )
+        .fetch_one(pool)
+        .await?;
+
+        self.name = name_string;
+
+        Ok(())
     }
 
     // Overwrites the description
@@ -56,24 +76,57 @@ impl Session {
         description: Option<S>,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        todo!();
+        let description_string = description.map_or(None, |i| Some(i.to_string()));
+
+        sqlx::query!(
+            "UPDATE sessions SET description = $1 WHERE id = $2",
+            description_string,
+            self.id,
+        )
+        .execute(pool)
+        .await?;
+
+        self.description = description_string;
+
+        Ok(())
     }
 
     // Deleted the sessions and the exercise instances related and their sets related to it
     // Exercise is not deleted
     pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
-        todo!();
+        sqlx::query!("DELETE FROM sessions WHERE id = $1", self.id)
+            .execute(pool)
+            .await?;
+
+        Ok(self.id)
     }
 
     // Finish the session, permanent but doesn't lock exercise instances or their sets
     pub async fn mark_finished(&mut self, pool: &PgPool) -> Result<(), RouteError> {
-        todo!();
+        self.finished = sqlx::query!("UPDATE sessions SET finished = NOW() RETURNING finished")
+            .fetch_one(pool)
+            .await?
+            .finished;
+
+        Ok(())
     }
 
     // Get an instance from an ID, also fills the exercise instance field with it's
     // own field of sets
     pub async fn from_id(user_id: Uuid, id: Uuid, pool: &PgPool) -> Result<Self, RouteError> {
-        todo!();
+        let mut queried_session: Self =
+            sqlx::query_as("SELECT * FROM sessions WHERE user_id = $1 AND id = $2")
+                .bind(user_id)
+                .bind(id)
+                .fetch_one(pool)
+                .await?;
+
+        // Fill the exercise instances with the helper function in it's module,
+        // sets are filled by the helper function for each instance
+        queried_session.exercise_instances =
+            exercise_instance::all_from_session_id(user_id, id, pool).await?;
+
+        Ok(queried_session)
     }
 
     pub fn is_finished(&self) -> bool {
@@ -93,6 +146,16 @@ impl Session {
     pub async fn move_exercise_instance_down(
         &mut self,
         moved_index: u64,
+        pool: &PgPool,
+    ) -> Result<(), RouteError> {
+        todo!();
+    }
+
+    // Helper for the two above
+    async fn switch_exercise_instance_index(
+        &mut self,
+        index_1: u64,
+        index_2: u64,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
         todo!();
