@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE sets SET weight = $1 WHERE id = $2 RETURNING weight;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "weight",
+        "type_info": "Float4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float4",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "65d8fc56f37d86c30cc791dc5e4c80bcfff536bfc97dc6a841a3f7c4b4e41cb6"
+}

@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS sets (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
     exercise_instance_id uuid NOT NULL,
-    weihgt NUMERIC(10, 1),
+    weight REAL,
     reps integer CHECK (reps >= 0),
     completed boolean NOT NULL DEFAULT false,
     created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
