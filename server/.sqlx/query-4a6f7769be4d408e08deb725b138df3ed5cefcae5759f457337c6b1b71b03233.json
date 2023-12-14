@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE exercise_instances SET comments = array_remove(comments, $1) WHERE id = $2 RETURNING comments",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "comments",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4a6f7769be4d408e08deb725b138df3ed5cefcae5759f457337c6b1b71b03233"
+}

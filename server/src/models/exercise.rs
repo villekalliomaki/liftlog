@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display};
 
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, prelude::FromRow};
 use tracing::{debug, info};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -11,7 +11,7 @@ use crate::api::response::RouteError;
 
 // Reusable definition binding a name (and description) to a specific lift and a type
 // and referenced in templates and sessions.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, FromRow)]
 pub struct Exercise {
     // Primary key
     pub id: Uuid,

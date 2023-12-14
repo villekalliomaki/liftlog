@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE exercise_instances SET comments = comments || $1 WHERE id = $2 RETURNING comments",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "comments",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d708954d47e663aee981af68ba3f6663be4ba786ef13b285aee26775049747b3"
+}

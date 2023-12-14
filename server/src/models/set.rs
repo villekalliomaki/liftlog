@@ -1,11 +1,10 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{pool, prelude::FromRow, PgPool};
+use sqlx::{prelude::FromRow, PgPool};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::api::response::RouteError;
-
-use super::exercise_instance;
 
 // An ExerciseInstance has zero or more of these..
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema, FromRow)]
@@ -18,11 +17,13 @@ pub struct Set {
     pub exercise_instance_id: Uuid,
     // The weight used in kilograms, can be negative to signify an assisted lift
     pub weight: Option<f64>,
-    // The reps are 0 or more
-    pub reps: Option<u64>,
+    // The reps are 0 or more (checked by db)
+    pub reps: Option<i64>,
     // When created set is not completed and weight and reps have to be set before
     // marking it as complete
     pub completed: bool,
+    // Mainly for ordering of instances and can't be changed
+    pub created: DateTime<Utc>,
 }
 
 impl Set {
@@ -53,7 +54,7 @@ impl Set {
         todo!();
     }
 
-    pub async fn set_reps(&mut self, reps: Option<u64>, pool: &PgPool) -> Result<(), RouteError> {
+    pub async fn set_reps(&mut self, reps: Option<i64>, pool: &PgPool) -> Result<(), RouteError> {
         todo!();
     }
 
@@ -64,6 +65,21 @@ impl Set {
     pub async fn set_incomplete(&mut self, pool: &PgPool) -> Result<(), RouteError> {
         todo!();
     }
+}
+
+// Helper function to get all sets related to one exercise instance
+pub async fn all_from_exercise_instance_id(
+    user_id: Uuid,
+    exercise_instance_id: Uuid,
+    pool: &PgPool,
+) -> Result<Vec<Set>, RouteError> {
+    Ok(sqlx::query_as(
+        "SELECT * FROM sets WHERE user_id = $1 AND exercise_instance_id = $2 ORDER BY created",
+    )
+    .bind(user_id)
+    .bind(exercise_instance_id)
+    .fetch_all(pool)
+    .await?)
 }
 
 #[cfg(test)]
@@ -182,7 +198,7 @@ mod tests {
     async fn set_reps(pool: PgPool) {
         let (user, _, _, exercise_instance, mut set) = create_test_set(&pool).await;
 
-        let reps: Option<u64> = Some(14);
+        let reps: Option<i64> = Some(14);
 
         set.set_reps(reps, &pool).await.unwrap();
 

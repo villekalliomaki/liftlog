@@ -1,11 +1,13 @@
 use std::fmt::{Debug, Display};
 
+use axum::http::StatusCode;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::api::response::RouteError;
+use crate::{api::response::RouteError, models::set};
 
 use super::{exercise::Exercise, set::Set};
 
@@ -26,13 +28,14 @@ pub struct ExerciseInstance {
     pub user_id: Uuid,
     // An exercise instance is bound to a session
     pub session_id: Uuid,
-    // Index number for displaying in a session
-    pub session_index: usize,
+    // Mainly for ordering of instances and can't be changed
+    pub created: DateTime<Utc>,
     // The predefined exercise this one is an instance of
-    pub exercise: Exercise,
+    pub exercise_id: Uuid,
     // Comments tied to this instance, and this way also the session
     pub comments: Vec<String>,
     // The sets included in the instance (order sensitive and immutable without deleting or adding)
+    #[sqlx(skip)]
     pub sets: Vec<Set>,
 }
 
@@ -44,7 +47,7 @@ impl ExerciseInstance {
         exercise_id: Uuid,
         pool: &PgPool,
     ) -> Result<Self, RouteError> {
-        todo!();
+        Ok(sqlx::query_as("INSERT INTO exercise_instances (user_id, session_id, exercise_id) VALUES ($1, $2, $3) RETURNING *").bind(user_id).bind(session_id).bind(exercise_id).fetch_one(pool).await?)
     }
 
     // Get existing one by ID and user
@@ -53,36 +56,85 @@ impl ExerciseInstance {
         exercise_instance_id: Uuid,
         pool: &PgPool,
     ) -> Result<Self, RouteError> {
-        todo!();
+        let mut queried_instances: Self =
+            sqlx::query_as("SELECT * FROM exercise_instances WHERE user_id = $1 AND id = $2")
+                .bind(user_id)
+                .bind(exercise_instance_id)
+                .fetch_one(pool)
+                .await?;
+
+        queried_instances.sets =
+            set::all_from_exercise_instance_id(user_id, exercise_instance_id, pool).await?;
+
+        Ok(queried_instances)
     }
 
     // Delete the instance and the sets related to it
     pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
-        todo!();
+        sqlx::query!("DELETE FROM exercise_instances WHERE id = $1", self.id)
+            .execute(pool)
+            .await?;
+
+        Ok(self.id)
     }
 
     // Add a comment to the instance, always appended to the list
-    pub async fn add_comment<S: ToString + Display + Debug>(
+    pub async fn add_comment(
         &mut self,
-        comment: S,
+        comment: impl ToString + Display + Debug,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        todo!();
+        self.comments = sqlx::query!(
+            "UPDATE exercise_instances SET comments = comments || $1 WHERE id = $2 RETURNING comments",
+            &[comment.to_string()],
+            self.id
+        )
+        .fetch_one(pool)
+        .await?.comments;
+
+        Ok(())
     }
 
     // Overwrite a comment of a specific index if it exists
-    pub async fn set_comment<S: ToString + Display + Debug>(
+    pub async fn set_comment(
         &mut self,
-        index: u64,
-        comment: S,
+        index: i32,
+        comment: impl ToString + Display + Debug,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        todo!();
+        self.comments = sqlx::query!(
+            "UPDATE exercise_instances SET comments[$1] = $2 WHERE id = $3 RETURNING comments",
+            index + 1,
+            comment.to_string(),
+            self.id
+        )
+        .fetch_one(pool)
+        .await?
+        .comments;
+
+        Ok(())
     }
 
     // Deleted a comment index if it exists
-    pub async fn delete_comment(&mut self, index: u64, pool: &PgPool) -> Result<(), RouteError> {
-        todo!();
+    pub async fn delete_comment(&mut self, index: usize, pool: &PgPool) -> Result<(), RouteError> {
+        match self.comments.get(index) {
+            Some(value) => {
+                self.comments = sqlx::query!(
+                "UPDATE exercise_instances SET comments = array_remove(comments, $1) WHERE id = $2 RETURNING comments",
+                value,
+                self.id
+            )
+                .fetch_one(pool)
+                .await?.comments;
+
+                Ok(())
+            }
+            None => Err(RouteError::new(
+                "Tried to remove a comment in an exercise instance with invalid index.",
+                None::<&str>,
+                StatusCode::BAD_REQUEST,
+            )),
+        }
     }
 
     // Replaces the exercise with the given one if it exists
@@ -91,7 +143,17 @@ impl ExerciseInstance {
         exercise_id: Uuid,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        todo!();
+        sqlx::query!(
+            "UPDATE exercise_instances SET exercise_id = $1 WHERE id = $2",
+            exercise_id,
+            self.id
+        )
+        .execute(pool)
+        .await?;
+
+        self.exercise_id = exercise_id;
+
+        Ok(())
     }
 }
 
@@ -102,7 +164,20 @@ pub async fn all_from_session_id(
     session_id: Uuid,
     pool: &PgPool,
 ) -> Result<Vec<ExerciseInstance>, RouteError> {
-    todo!();
+    let mut all: Vec<ExerciseInstance> = sqlx::query_as(
+        "SELECT * FROM exercise_instances WHERE user_id = $1 AND session_id = $2 ORDER BY created",
+    )
+    .bind(user_id)
+    .bind(session_id)
+    .fetch_all(pool)
+    .await?;
+
+    // Query all sets contained in each instance
+    for instance in &mut all {
+        instance.sets = set::all_from_exercise_instance_id(user_id, instance.id, pool).await?;
+    }
+
+    Ok(all)
 }
 
 #[cfg(test)]
@@ -241,7 +316,7 @@ mod tests {
                 .await
                 .unwrap();
 
-        assert_eq!(exercise_instance_query.exercise, new_exercise);
+        assert_eq!(exercise_instance_query.exercise_id, new_exercise.id);
     }
 
     #[sqlx::test]
@@ -249,7 +324,7 @@ mod tests {
         let (user, exercise, session, _) = create_test_exercise_instance(&pool).await;
 
         // Add some instances
-        for _ in 0..10 {
+        for _ in 1..10 {
             ExerciseInstance::new(user.id, session.id, exercise.id, &pool)
                 .await
                 .unwrap();

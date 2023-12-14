@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display};
 
+use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
@@ -132,48 +133,13 @@ impl Session {
     pub fn is_finished(&self) -> bool {
         self.finished.is_some()
     }
-
-    // Swaps an exercise instance with the one before it, if one exists
-    pub async fn move_exercise_instance_up(
-        &mut self,
-        moved_index: u64,
-        pool: &PgPool,
-    ) -> Result<(), RouteError> {
-        todo!();
-    }
-
-    // Swaps an exercise instance with the one after it, if one exists
-    pub async fn move_exercise_instance_down(
-        &mut self,
-        moved_index: u64,
-        pool: &PgPool,
-    ) -> Result<(), RouteError> {
-        todo!();
-    }
-
-    // Helper for the two above
-    async fn switch_exercise_instance_index(
-        &mut self,
-        index_1: u64,
-        index_2: u64,
-        pool: &PgPool,
-    ) -> Result<(), RouteError> {
-        todo!();
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use sqlx::PgPool;
 
-    use crate::{
-        api::response::RouteError,
-        models::{
-            exercise::{Exercise, ExerciseKind},
-            user::User,
-        },
-        test_utils::database::test_user,
-    };
+    use crate::{api::response::RouteError, models::user::User, test_utils::database::test_user};
 
     use super::*;
 
@@ -241,78 +207,5 @@ mod tests {
 
         assert!(queried_session.is_finished());
         assert!(queried_session.finished.is_some());
-    }
-
-    #[sqlx::test]
-    async fn reorder_exercise_instances(pool: PgPool) {
-        let (user, session) = create_test_session(&pool).await;
-
-        // Different exercises
-        let new_exercises: Vec<Exercise> = vec![];
-        for i in 0..2 {
-            Exercise::new(
-                user.id,
-                format!("Bench press {}", i),
-                Some("description"),
-                true,
-                None::<&str>,
-                ExerciseKind::Barbell,
-                &pool,
-            )
-            .await
-            .unwrap();
-        }
-
-        // Create one instance for every exercise
-        let mut exercise_instances: Vec<ExerciseInstance> = vec![];
-        for i in new_exercises {
-            let new_instance: ExerciseInstance =
-                ExerciseInstance::new(user.id, session.id, i.id, &pool)
-                    .await
-                    .unwrap();
-
-            exercise_instances.push(new_instance);
-        }
-
-        // Check the current order
-        let mut queried_session_unchanged: Session =
-            Session::from_id(user.id, session.id, &pool).await.unwrap();
-
-        assert_eq!(
-            queried_session_unchanged.exercise_instances,
-            exercise_instances
-        );
-
-        // Change order,
-        queried_session_unchanged
-            .move_exercise_instance_up(1, &pool)
-            .await
-            .unwrap();
-
-        // Moving up is swapping the index and the one before
-        exercise_instances.swap(0, 1);
-        let queried_session_changed_1: Session =
-            Session::from_id(user.id, session.id, &pool).await.unwrap();
-
-        assert_eq!(
-            exercise_instances,
-            queried_session_changed_1.exercise_instances
-        );
-
-        // Change order again
-        queried_session_unchanged
-            .move_exercise_instance_down(1, &pool)
-            .await
-            .unwrap();
-
-        // Moving down is swapping the index and the one after
-        exercise_instances.swap(1, 2);
-        let queried_session_changed_2: Session =
-            Session::from_id(user.id, session.id, &pool).await.unwrap();
-
-        assert_eq!(
-            exercise_instances,
-            queried_session_changed_2.exercise_instances
-        );
     }
 }
