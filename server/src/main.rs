@@ -15,7 +15,7 @@ use tracing_subscriber::FmtSubscriber;
 async fn main() {
     init_tracing();
 
-    info!("Starting LiftLog");
+    info!("Starting LiftLog ...");
 
     let current_setttings = settings::build();
 

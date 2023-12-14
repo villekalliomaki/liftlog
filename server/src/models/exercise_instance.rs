@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{api::response::RouteError, models::set};
 
-use super::{exercise::Exercise, set::Set};
+use super::set::Set;
 
 // One instance of an existing exercise, containing:
 // - Comments tied to the session
@@ -187,7 +187,7 @@ mod tests {
     use crate::{
         api::response::RouteError,
         models::{
-            exercise::{self, ExerciseKind},
+            exercise::{Exercise, ExerciseKind},
             session::Session,
             user::User,
         },

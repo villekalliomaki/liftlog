@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Display};
 
-use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
