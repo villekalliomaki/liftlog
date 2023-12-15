@@ -1,6 +1,9 @@
 mod access_token;
 mod exercise;
+mod exercise_instance;
 mod ping;
+mod session;
+mod set;
 mod user;
 
 use crate::{
@@ -11,6 +14,7 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
+use serde::{Deserialize, Deserializer};
 use sqlx::PgPool;
 use tracing::{info, instrument};
 use utoipa::{
@@ -20,6 +24,24 @@ use utoipa::{
 use utoipa_rapidoc::RapiDoc;
 use utoipa_redoc::{Redoc, Servable};
 use utoipa_swagger_ui::SwaggerUi;
+
+// For serde...
+pub fn default_as_false() -> bool {
+    false
+}
+
+// Used for nested options: https://github.com/serde-rs/serde/issues/904
+// Only way to have optional fields, which differentiate between the field being missing
+// and being set to null js JSON
+pub fn deserialize_optional_option<'de, T, D>(
+    deserializer: D,
+) -> Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
 
 // Centralized builder for all API routes.
 // Actual routes are also under this module,
@@ -45,6 +67,12 @@ pub fn build_router(pool: PgPool) -> Router {
             exercise::delete_exercise_by_id,
             exercise::get_user_exercises,
             exercise::get_user_exercises_by_kind,
+            session::create_session,
+            session::edit_session,
+            session::delete_session_by_id,
+            session::get_session_by_id,
+            session::finish_session,
+            session::get_all_user_sessions,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -58,12 +86,16 @@ pub fn build_router(pool: PgPool) -> Router {
             models::user::User,
             models::exercise::Exercise,
             models::exercise::ExerciseKind,
+            models::session::Session,
+            models::exercise_instance::ExerciseInstance,
+            models::set::Set,
             routes::user::CreateUserInput,
             routes::user::ChangeUsernameInput,
             routes::user::ChangePasswordInput,
             routes::access_token::CreateAccessTokenInput,
             routes::exercise::CreateExerciseInput,
             routes::exercise::EditExerciseInput,
+            routes::session::CreateSessionInput,
         ))
     )]
     struct ApiDoc;
@@ -106,11 +138,20 @@ pub fn build_router(pool: PgPool) -> Router {
         .route("/:exercise_id", get(exercise::get_exercise_by_id))
         .route("/:exercise_id", delete(exercise::delete_exercise_by_id));
 
+    let session_router = Router::new()
+        .route("/", post(session::create_session))
+        .route("/", get(session::get_all_user_sessions))
+        .route("/:session_id", patch(session::edit_session))
+        .route("/:session_id", delete(session::delete_session_by_id))
+        .route("/:session_id", get(session::get_session_by_id))
+        .route("/:session_id/finish", patch(session::finish_session));
+
     let api_router = Router::new()
         .route("/ping", get(ping::handle))
         .nest("/user", user_router)
         .nest("/access_token", access_token_router)
-        .nest("/exercise", exercise_router);
+        .nest("/exercise", exercise_router)
+        .nest("/session", session_router);
 
     Router::new()
         .merge(SwaggerUi::new("/docs/swagger_ui").url("/docs/spec/openapi.json", ApiDoc::openapi()))

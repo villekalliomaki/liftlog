@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use sqlx::PgPool;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -17,26 +17,17 @@ use crate::{
     },
 };
 
-// For serde...
-fn default_as_false() -> bool {
-    false
-}
-
-// Used for nested options: https://github.com/serde-rs/serde/issues/904
-// Only way to have optional fields, which differentiate between the field being missing
-// and being set to null js JSON
-fn deserialize_optional_option<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
-where
-    T: Deserialize<'de>,
-    D: Deserializer<'de>,
-{
-    Option::<T>::deserialize(deserializer).map(Some)
-}
+use super::{default_as_false, deserialize_optional_option};
 
 #[derive(Debug, Validate, Deserialize, ToSchema)]
 pub struct CreateExerciseInput {
     #[validate(length(min = 1, max = 30, message = "must be between 1 and 30 characters"))]
     name: String,
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "must be between 1 and 10000 characters"
+    ))]
     #[validate(length(
         min = 1,
         max = 10000,
@@ -58,6 +49,9 @@ pub struct CreateExerciseInput {
     post,
     path = "/api/exercise",
     request_body = CreateExerciseInput,
+    security(
+        ("access_token"= [])
+    ),
     responses(
         (status = CREATED, description = "New exercise created", body = RouteSuccessExercise),
         (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
@@ -101,6 +95,11 @@ pub struct EditExerciseInput {
         message = "must be between 1 and 10000 characters"
     ))]
     #[serde(default, deserialize_with = "deserialize_optional_option")]
+    #[validate(length(
+        min = 1,
+        max = 10000,
+        message = "must be between 1 and 10000 characters"
+    ))]
     description: Option<Option<String>>,
     favourite: Option<bool>,
     #[validate(length(
@@ -120,6 +119,9 @@ pub struct EditExerciseInput {
         ("exercise_id" = Uuid, Path, description = "The ID of the edited exercise")
     ),
     request_body = EditExerciseInput,
+    security(
+        ("access_token"= [])
+    ),
     responses(
         (status = OK, description = "Exercise updated", body = RouteSuccessExercise),
         (status = NOT_FOUND, description = "Invalid exercise ID", body = RouteError),
@@ -176,6 +178,9 @@ pub async fn edit_exercise(
     params(
         ("exercise_id" = Uuid, Path, description = "The ID of the exercise requested")
     ),
+    security(
+        ("access_token"= [])
+    ),
     responses(
         (status = OK, description = "Exercise found and returned", body = RouteSuccessExercise),
         (status = NOT_FOUND, description = "Invalid exercise ID", body = RouteError),
@@ -200,6 +205,9 @@ pub async fn get_exercise_by_id(
     path = "/api/exercise/{exercise_id}",
     params(
         ("exercise_id" = Uuid, Path, description = "The ID of the exercise requested")
+    ),
+    security(
+        ("access_token"= [])
     ),
     responses(
         (status = OK, description = "Exercise found and deleted", body = RouteSuccessUuid),
@@ -226,6 +234,9 @@ pub async fn delete_exercise_by_id(
 #[utoipa::path(
     get,
     path = "/api/exercise/all",
+    security(
+        ("access_token"= [])
+    ),
     responses(
         (status = OK, description = "Exercises returned", body = RouteSuccessExerciseVec),
         (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
@@ -247,6 +258,9 @@ pub async fn get_user_exercises(
     path = "/api/exercise/all/{exercise_kind}",
     params(
         ("exercise_kind" = Uuid, Path, description = "The ID of the exercise requested")
+    ),
+    security(
+        ("access_token"= [])
     ),
     responses(
         (status = OK, description = "Exercises returned", body = RouteSuccessExerciseVec),

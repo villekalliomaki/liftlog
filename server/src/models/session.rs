@@ -134,6 +134,22 @@ impl Session {
     }
 }
 
+// Get all sessions of an user with all related exercise instances and their sets
+pub async fn all_user_sessions(user_id: Uuid, pool: &PgPool) -> Result<Vec<Session>, RouteError> {
+    let mut queried_sessions: Vec<Session> =
+        sqlx::query_as("SELECT * FROM sessions WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_all(pool)
+            .await?;
+
+    for session in &mut queried_sessions {
+        session.exercise_instances =
+            exercise_instance::all_from_session_id(user_id, session.id, pool).await?;
+    }
+
+    Ok(queried_sessions)
+}
+
 #[cfg(test)]
 mod tests {
     use sqlx::PgPool;
