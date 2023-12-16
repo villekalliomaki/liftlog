@@ -215,7 +215,7 @@ pub async fn finish_session(
         ("access_token"= [])
     ),
     responses(
-        (status = FOUND, description = "Returned all user's sessions (zero or more)", body = RouteSuccessSession),
+        (status = FOUND, description = "Returned all user's sessions (zero or more)", body = RouteSuccessSessionVec),
         (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
         (status = BAD_REQUEST, description = "Invalid ID format", body = RouteError),
     )
