@@ -82,7 +82,7 @@ impl Exercise {
         exercise_id: Uuid,
         pool: &PgPool,
     ) -> Result<Exercise, RouteError> {
-        debug!("Querying exercise {} of user {}", exercise_id, user_id);
+        info!("Querying exercise {} of user {}", exercise_id, user_id);
 
         Ok(sqlx::query_as!(
             Exercise,
@@ -272,13 +272,13 @@ pub async fn all_user_exercises(
 mod tests {
     use sqlx::PgPool;
 
-    use crate::{models::user::User, test_utils::database::test_user};
+    use crate::{models::user::User, test_utils::database::create_test_user};
 
     use super::*;
 
     // Test utility
     async fn create_user_and_exercise(pool: &PgPool) -> (User, Exercise) {
-        let user = test_user(pool).await;
+        let user = create_test_user(pool).await;
 
         // Just create a new one
         let new_exercise = Exercise::new(

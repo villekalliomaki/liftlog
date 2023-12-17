@@ -57,6 +57,8 @@ impl AccessToken {
         token: impl ToString + Display + Debug,
         pool: &PgPool,
     ) -> Result<AccessToken, RouteError> {
+        info!("Querying potential access token");
+
         let potential_token = sqlx::query_as!(
             AccessToken,
             "SELECT * FROM access_tokens WHERE token = $1 AND expires > NOW()",
@@ -144,13 +146,13 @@ impl AccessToken {
 mod tests {
     use sqlx::PgPool;
 
-    use crate::test_utils::database::test_user;
+    use crate::test_utils::database::create_test_user;
 
     use super::*;
 
     #[sqlx::test]
     async fn unexpired(pool: PgPool) {
-        let user = test_user(&pool).await;
+        let user = create_test_user(&pool).await;
 
         // Token with 1 minute validity
         let access_token: AccessToken = AccessToken::new(user.id, Duration::seconds(60), &pool)
@@ -169,7 +171,7 @@ mod tests {
 
     #[sqlx::test]
     async fn expired(pool: PgPool) {
-        let user = test_user(&pool).await;
+        let user = create_test_user(&pool).await;
 
         // Token with 1 second validity
         let access_token: AccessToken = AccessToken::new(user.id, Duration::seconds(1), &pool)
@@ -190,7 +192,7 @@ mod tests {
 
     #[sqlx::test]
     async fn deleted_user(pool: PgPool) {
-        let user = test_user(&pool).await;
+        let user = create_test_user(&pool).await;
 
         let access_token: AccessToken = AccessToken::new(user.id, Duration::seconds(60), &pool)
             .await
@@ -207,7 +209,7 @@ mod tests {
 
     #[sqlx::test]
     async fn get_user(pool: PgPool) {
-        let user = test_user(&pool).await;
+        let user = create_test_user(&pool).await;
 
         let access_token: AccessToken = AccessToken::new(user.id, Duration::seconds(60), &pool)
             .await
@@ -219,7 +221,7 @@ mod tests {
 
     #[sqlx::test]
     async fn delete(pool: PgPool) {
-        let user = test_user(&pool).await;
+        let user = create_test_user(&pool).await;
 
         let access_token: AccessToken = AccessToken::new(user.id, Duration::seconds(60), &pool)
             .await

@@ -321,7 +321,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_exercise(pool: PgPool) {
-        let (server, _, token) = create_test_app(pool).await;
+        let (server, _, token) = create_test_app(&pool).await;
         let (header_name, header_value) = get_auth_header(&token);
 
         // Required fields
@@ -357,7 +357,7 @@ mod tests {
 
     #[sqlx::test]
     async fn edit_exercise_fields(pool: PgPool) {
-        let (server, _, token) = create_test_app(pool).await;
+        let (server, _, token) = create_test_app(&pool).await;
         let (header_name, header_value) = get_auth_header(&token);
         let test_exercise = create_test_exercise(&server, &header_name, &header_value).await;
 
@@ -398,7 +398,7 @@ mod tests {
 
     #[sqlx::test]
     async fn edit_exercise_fields_partial(pool: PgPool) {
-        let (server, _, token) = create_test_app(pool).await;
+        let (server, _, token) = create_test_app(&pool).await;
         let (header_name, header_value) = get_auth_header(&token);
         let test_exercise = create_test_exercise(&server, &header_name, &header_value).await;
 
@@ -435,7 +435,7 @@ mod tests {
 
     #[sqlx::test]
     async fn delete_exercise(pool: PgPool) {
-        let (server, _, token) = create_test_app(pool).await;
+        let (server, _, token) = create_test_app(&pool).await;
         let (header_name, header_value) = get_auth_header(&token);
         let test_exercise = create_test_exercise(&server, &header_name, &header_value).await;
 
@@ -454,7 +454,7 @@ mod tests {
 
     #[sqlx::test]
     async fn get_multiple_exercises(pool: PgPool) {
-        let (server, _, token) = create_test_app(pool).await;
+        let (server, _, token) = create_test_app(&pool).await;
         let (header_name, header_value) = get_auth_header(&token);
 
         for _ in 0..20 {
@@ -474,7 +474,7 @@ mod tests {
 
     #[sqlx::test]
     async fn get_multiple_exercises_by_kind(pool: PgPool) {
-        let (server, _, token) = create_test_app(pool).await;
+        let (server, _, token) = create_test_app(&pool).await;
         let (header_name, header_value) = get_auth_header(&token);
 
         // One barbell kind

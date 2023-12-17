@@ -1,8 +1,12 @@
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
+use rust_decimal::{
+    prelude::{FromPrimitive, ToPrimitive},
+    Decimal,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -93,10 +97,35 @@ impl Set {
     #[instrument]
     pub async fn set_weight(
         &mut self,
-        weight: Option<f32>,
+        mut weight: Option<f32>,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
         info!("Updating set weight");
+
+        // All this just to round it to one decimal reliably...
+        if let Some(not_rounded_weight) = weight {
+            if let Some(decimal) = Decimal::from_f32(not_rounded_weight) {
+                if let Some(rounded) = decimal.round_dp(1).to_f32() {
+                    weight = Some(rounded);
+                } else {
+                    error!("Failed to round Decimal to f32: {}", decimal);
+
+                    return Err(RouteError::new(
+                        "Failed to process decimal number.",
+                        Some("weight"),
+                        StatusCode::BAD_REQUEST,
+                    ));
+                }
+            } else {
+                error!("Failed to convert f32 to Decimal: {}", not_rounded_weight);
+
+                return Err(RouteError::new(
+                    "Failed to process decimal number.",
+                    Some("weight"),
+                    StatusCode::BAD_REQUEST,
+                ));
+            }
+        }
 
         self.weight = sqlx::query!(
             "UPDATE sets SET weight = $1 WHERE id = $2 RETURNING weight;",
@@ -182,13 +211,13 @@ mod tests {
             session::Session,
             user::User,
         },
-        test_utils::database::test_user,
+        test_utils::database::create_test_user,
     };
 
     use super::*;
 
     async fn create_test_set(pool: &PgPool) -> (User, Exercise, Session, ExerciseInstance, Set) {
-        let user = test_user(&pool).await;
+        let user = create_test_user(&pool).await;
 
         let new_exercise = Exercise::new(
             user.id,

@@ -194,7 +194,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_user(pool: PgPool) {
-        let server = test_server(pool);
+        let server = test_server(&pool);
 
         test_user_from_api(&server).await;
         let access_token = access_token_from_api(&server).await;
@@ -216,7 +216,7 @@ mod tests {
 
     #[sqlx::test]
     async fn username_conflict(pool: PgPool) {
-        let server = test_server(pool);
+        let server = test_server(&pool);
 
         let response = server
             .post("/api/user")
@@ -243,7 +243,7 @@ mod tests {
 
     #[sqlx::test]
     async fn delete_user(pool: PgPool) {
-        let server = test_server(pool);
+        let server = test_server(&pool);
 
         test_user_from_api(&server).await;
         let access_token = access_token_from_api(&server).await;
@@ -276,7 +276,7 @@ mod tests {
 
     #[sqlx::test]
     async fn change_password(pool: PgPool) {
-        let server = test_server(pool);
+        let server = test_server(&pool);
 
         test_user_from_api(&server).await;
         let access_token = access_token_from_api(&server).await;
@@ -324,7 +324,7 @@ mod tests {
 
     #[sqlx::test]
     async fn change_username(pool: PgPool) {
-        let server = test_server(pool);
+        let server = test_server(&pool);
 
         test_user_from_api(&server).await;
         let access_token = access_token_from_api(&server).await;

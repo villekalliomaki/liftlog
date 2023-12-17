@@ -30,6 +30,7 @@ pub struct CreateExerciseInstanceInput {
     responses(
         (status = CREATED, description = "New exercise instance created", body = RouteSuccessExerciseInstance),
         (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = NOT_FOUND, description = "Exercise or session not found", body = RouteError),
         (status = BAD_REQUEST, description = "Invalid input for exercise instance", body = RouteError),
     )
 )]
@@ -285,83 +286,16 @@ mod tests {
             exercise::Exercise, exercise_instance::ExerciseInstance, session::Session, set::Set,
             user::User,
         },
-        test_utils::api::{create_test_app, get_auth_header},
+        test_utils::{
+            api::{create_test_app, get_auth_header},
+            database::create_test_scenario,
+        },
     };
-
-    // Helper function to initialize a test scenario
-    async fn init_test_case(
-        pool: &PgPool,
-    ) -> (TestServer, User, Session, Exercise, ExerciseInstance) {
-        let (mut server, user, access_token) = create_test_app(pool.clone()).await;
-        let (header_name, header_value) = get_auth_header(&access_token);
-
-        server.add_header(header_name.clone(), header_value.clone());
-
-        let session = create_test_session(&server).await;
-        let exercise = create_test_exercise(&server).await;
-
-        let exercise_instance =
-            create_test_exercise_instance(&server, session.id, exercise.id).await;
-
-        (server, user, session, exercise, exercise_instance)
-    }
-
-    // Create a test instance
-    pub async fn create_test_exercise_instance(
-        server: &TestServer,
-        session_id: Uuid,
-        exercise_id: Uuid,
-    ) -> ExerciseInstance {
-        server
-            .post("/api/exercise_instance")
-            .json(&json!(
-                {
-                    "session_id": session_id,
-                    "exercise_id": exercise_id,
-                }
-            ))
-            .await
-            .json::<RouteSuccess<ExerciseInstance>>()
-            .data
-    }
-
-    // Create an empty test session
-    async fn create_test_session(server: &TestServer) -> Session {
-        server
-            .post("/api/session")
-            .json(&json!(
-                {
-                    "name": "Legs",
-                    "description": "A description",
-                }
-            ))
-            .await
-            .json::<RouteSuccess<Session>>()
-            .data
-    }
-
-    // Create a test exercise to be linked to any instances
-    async fn create_test_exercise(server: &TestServer) -> Exercise {
-        server
-            .post("/api/exercise")
-            .json(&json!(
-                {
-                    "name": "Bench press",
-                    "description": "Flat bench",
-                    "notes": "Something ...",
-                    "favourite": true,
-                    "kind": "barbell",
-
-                }
-            ))
-            .await
-            .json::<RouteSuccess<Exercise>>()
-            .data
-    }
 
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (server, _, _, _, exercise_instance) = init_test_case(&pool).await;
+        let (server, user, access_token, exercise, session, exercise_instance, set) =
+            create_test_scenario(&pool).await;
 
         // Query instance
         let valid_query = server
@@ -382,7 +316,8 @@ mod tests {
 
     #[sqlx::test]
     async fn edit_comments(pool: PgPool) {
-        let (server, _, _, _, exercise_instance) = init_test_case(&pool).await;
+        let (server, user, access_token, exercise, session, exercise_instance, set) =
+            create_test_scenario(&pool).await;
 
         // Add 3 comments
         for i in 0..3 {
@@ -432,7 +367,8 @@ mod tests {
     // Try to change to an invalid exercise
     #[sqlx::test]
     async fn change_exercise(pool: PgPool) {
-        let (server, _, _, _, exercise_instance) = init_test_case(&pool).await;
+        let (server, user, access_token, exercise, session, exercise_instance, set) =
+            create_test_scenario(&pool).await;
 
         server
             .patch(&format!("/api/exercise_instance/{}", exercise_instance.id))
@@ -444,7 +380,8 @@ mod tests {
     // Delete with sets linked to the instance
     #[sqlx::test]
     async fn delete_with_sets(pool: PgPool) {
-        let (server, _, _, _, exercise_instance) = init_test_case(&pool).await;
+        let (server, user, access_token, exercise, session, exercise_instance, set) =
+            create_test_scenario(&pool).await;
 
         // Create a few sets
         let mut sets: Vec<Set> = vec![];
@@ -452,7 +389,8 @@ mod tests {
         for _ in 1..3 {
             sets.push(
                 server
-                    .post(&format!("/api/set/{}", exercise_instance.id))
+                    .post("/api/set")
+                    .json(&json!({"exercise_instance_id": exercise_instance.id}))
                     .await
                     .json::<RouteSuccess<Set>>()
                     .data,
@@ -477,7 +415,8 @@ mod tests {
     // Try to delete an exercise which is used in an instance
     #[sqlx::test]
     async fn try_delete_used_exercise(pool: PgPool) {
-        let (_, _, _, exercise, _) = init_test_case(&pool).await;
+        let (server, user, access_token, exercise, session, exercise_instance, set) =
+            create_test_scenario(&pool).await;
 
         assert!(exercise.delete(&pool).await.is_err());
     }

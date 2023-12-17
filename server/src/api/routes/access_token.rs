@@ -126,7 +126,8 @@ mod tests {
     // Create a new access token and use it to get self
     #[sqlx::test]
     async fn create_token(pool: PgPool) {
-        let (server, user, _) = create_test_app(pool).await;
+        let (mut server, user, _) = create_test_app(&pool).await;
+        server.clear_headers();
 
         let new_access_token = create_test_token(&server, 60).await;
 
@@ -149,7 +150,9 @@ mod tests {
 
     #[sqlx::test]
     async fn delete_token(pool: PgPool) {
-        let (server, _, _) = create_test_app(pool).await;
+        let (mut server, _, _) = create_test_app(&pool).await;
+        server.clear_headers();
+
         let access_token = create_test_token(&server, 60).await;
 
         // Delete the token
@@ -174,7 +177,9 @@ mod tests {
 
     #[sqlx::test]
     async fn expired_token(pool: PgPool) {
-        let (server, _, _) = create_test_app(pool).await;
+        let (mut server, _, _) = create_test_app(&pool).await;
+        server.clear_headers();
+
         // Just one second validity, wait until it expires
         let access_token = create_test_token(&server, 1).await;
 
@@ -196,7 +201,8 @@ mod tests {
 
     #[sqlx::test]
     async fn too_long_validity(pool: PgPool) {
-        let (server, _, _) = create_test_app(pool).await;
+        let (mut server, _, _) = create_test_app(&pool).await;
+        server.clear_headers();
 
         // 2592000 is 30 days, so lets try 31
         let response = server
@@ -213,7 +219,8 @@ mod tests {
 
     #[sqlx::test]
     async fn missing_token(pool: PgPool) {
-        let (server, _, _) = create_test_app(pool).await;
+        let (mut server, _, _) = create_test_app(&pool).await;
+        server.clear_headers();
 
         // Try to query self without a token
         let invalid_token_response = server.get("/api/user").await;
@@ -223,7 +230,8 @@ mod tests {
 
     #[sqlx::test]
     async fn non_exsisting_token(pool: PgPool) {
-        let (server, _, _) = create_test_app(pool).await;
+        let (mut server, _, _) = create_test_app(&pool).await;
+        server.clear_headers();
 
         // Try to query self with a token that doesn't exist
         let invalid_token_response = server
@@ -242,7 +250,8 @@ mod tests {
 
     #[sqlx::test]
     async fn wrong_token_format(pool: PgPool) {
-        let (server, _, _) = create_test_app(pool).await;
+        let (mut server, _, _) = create_test_app(&pool).await;
+        server.clear_headers();
 
         // Try to query self with a token that doesn't exist
         let invalid_token_response = server

@@ -7,20 +7,24 @@ use crate::{
     models::{access_token::AccessToken, user::User},
 };
 
-use super::database::test_access_token;
+use super::database::create_test_access_token;
 
 // Shorter way to create a test server in integration tests
-pub fn test_server(pool: PgPool) -> TestServer {
-    TestServer::new(build_router(pool).into_make_service()).unwrap()
+pub fn test_server(pool: &PgPool) -> TestServer {
+    TestServer::new(build_router(pool.to_owned()).into_make_service()).unwrap()
 }
 
 // Create a test server, access token and an user
-pub async fn create_test_app(pool: PgPool) -> (TestServer, User, AccessToken) {
-    let user_and_token = test_access_token(&pool).await;
+pub async fn create_test_app(pool: &PgPool) -> (TestServer, User, AccessToken) {
+    let (user, access_token) = create_test_access_token(pool).await;
 
-    let server = test_server(pool);
+    let mut server = test_server(pool);
 
-    (server, user_and_token.0, user_and_token.1)
+    // Add auth headers to they don't have to me manually added each time
+    let (header_name, header_value) = get_auth_header(&access_token);
+    server.add_header(header_name, header_value);
+
+    (server, user, access_token)
 }
 
 pub fn get_auth_header(access_token: &AccessToken) -> (HeaderName, HeaderValue) {

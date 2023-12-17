@@ -161,7 +161,11 @@ impl ExerciseInstance {
 
     // Deleted a comment index if it exists
     #[instrument]
-    pub async fn delete_comment(&mut self, index: usize, pool: &PgPool) -> Result<usize, RouteError> {
+    pub async fn delete_comment(
+        &mut self,
+        index: usize,
+        pool: &PgPool,
+    ) -> Result<usize, RouteError> {
         match self.comments.get(index) {
             Some(value) => {
                 self.comments = sqlx::query!(
@@ -261,46 +265,15 @@ mod tests {
         models::{
             exercise::{Exercise, ExerciseKind},
             session::Session,
-            user::User,
         },
-        test_utils::database::test_user,
+        test_utils::database::create_test_scenario,
     };
 
     use super::*;
 
-    async fn create_test_exercise_instance(
-        pool: &PgPool,
-    ) -> (User, Exercise, Session, ExerciseInstance) {
-        let user = test_user(&pool).await;
-
-        let new_exercise = Exercise::new(
-            user.id,
-            "Bench press",
-            Some("description"),
-            true,
-            None::<&str>,
-            ExerciseKind::Barbell,
-            pool,
-        )
-        .await
-        .unwrap();
-
-        let new_session: Session =
-            Session::new(user.id, "Test sessions", Some("Test description"), &pool)
-                .await
-                .unwrap();
-
-        let new_exercise_instance: ExerciseInstance =
-            ExerciseInstance::new(user.id, new_session.id, new_exercise.id, &pool)
-                .await
-                .unwrap();
-
-        (user, new_exercise, new_session, new_exercise_instance)
-    }
-
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (user, _, session, exercise_instance) = create_test_exercise_instance(&pool).await;
+        let (_, user, _, _, session, exercise_instance, _) = create_test_scenario(&pool).await;
 
         let exercise_instance_query: ExerciseInstance =
             ExerciseInstance::from_id(user.id, exercise_instance.id, &pool)
@@ -318,7 +291,7 @@ mod tests {
 
     #[sqlx::test]
     async fn delete(pool: PgPool) {
-        let (user, _, _, exercise_instance) = create_test_exercise_instance(&pool).await;
+        let (_, user, _, _, _, exercise_instance, _) = create_test_scenario(&pool).await;
 
         exercise_instance.clone().delete(&pool).await.unwrap();
 
@@ -330,7 +303,7 @@ mod tests {
 
     #[sqlx::test]
     async fn edit_comments(pool: PgPool) {
-        let (user, _, _, mut exercise_instance) = create_test_exercise_instance(&pool).await;
+        let (_, user, _, _, _, mut exercise_instance, _) = create_test_scenario(&pool).await;
 
         exercise_instance
             .add_comment("Comment 1", &pool)
@@ -364,7 +337,7 @@ mod tests {
 
     #[sqlx::test]
     async fn change_exercise(pool: PgPool) {
-        let (user, _, _, mut exercise_instance) = create_test_exercise_instance(&pool).await;
+        let (_, user, _, _, _, mut exercise_instance, _) = create_test_scenario(&pool).await;
 
         let new_exercise = Exercise::new(
             user.id,
@@ -393,7 +366,7 @@ mod tests {
 
     #[sqlx::test]
     async fn get_all_from_session_id(pool: PgPool) {
-        let (user, exercise, session, _) = create_test_exercise_instance(&pool).await;
+        let (_, user, _, exercise, session, _, _) = create_test_scenario(&pool).await;
 
         // Add some instances
         for _ in 1..10 {

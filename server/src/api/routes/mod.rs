@@ -80,6 +80,10 @@ pub fn build_router(pool: PgPool) -> Router {
             exercise_instance::add_exercise_instance_comment,
             exercise_instance::set_exercise_instance_comment,
             exercise_instance::delete_exercise_instance_comment,
+            set::create_set,
+            set::get_set_by_id,
+            set::delete_set,
+            set::edit_set,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -108,6 +112,8 @@ pub fn build_router(pool: PgPool) -> Router {
             routes::exercise_instance::CreateExerciseInstanceCommentInput,
             routes::exercise_instance::SetExerciseInstanceCommentInput,
             routes::exercise_instance::EditExerciseInstanceInput,
+            routes::set::CreateSetInput,
+            routes::set::EditSetInput,
         ))
     )]
     struct ApiDoc;
@@ -185,12 +191,19 @@ pub fn build_router(pool: PgPool) -> Router {
             delete(exercise_instance::delete_exercise_instance_comment),
         );
 
+    let set_router = Router::new()
+        .route("/", post(set::create_set))
+        .route("/:set_id", get(set::get_set_by_id))
+        .route("/:set_id", delete(set::delete_set))
+        .route("/:set_id", patch(set::edit_set));
+
     let api_router = Router::new()
         .route("/ping", get(ping::handle))
         .nest("/user", user_router)
         .nest("/access_token", access_token_router)
         .nest("/exercise", exercise_router)
         .nest("/session", session_router)
+        .nest("/set", set_router)
         .nest("/exercise_instance", exercise_instance_router);
 
     Router::new()
