@@ -240,12 +240,10 @@ mod tests {
 
     use crate::{
         api::response::RouteSuccess,
-        models::{
-            exercise::Exercise, exercise_instance::ExerciseInstance, session::Session, user::User,
-        },
-        test_utils::{
-            api::{create_test_app, get_auth_header},
-            database::{create_test_exercise, create_test_exercise_instance, create_test_scenario, create_test_session},
+        models::session::Session,
+        test_utils::database::{
+            create_test_exercise, create_test_exercise_instance, create_test_scenario,
+            create_test_session,
         },
     };
 
@@ -260,8 +258,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, session, _, _) = create_test_scenario(&pool).await;
 
         // Query for the session
         let query = server
@@ -282,8 +279,7 @@ mod tests {
 
     #[sqlx::test]
     async fn set_name(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, session, _, _) = create_test_scenario(&pool).await;
 
         let new_name = "A new name";
 
@@ -305,8 +301,7 @@ mod tests {
     // Try to delete with at least one instance linked
     #[sqlx::test]
     async fn delete_with_exercise_instances(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, session, _, _) = create_test_scenario(&pool).await;
 
         // Add a exercise
         let exercise = create_test_exercise(&server).await;
@@ -330,8 +325,7 @@ mod tests {
 
     #[sqlx::test]
     async fn set_description(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, session, _, _) = create_test_scenario(&pool).await;
 
         let new_description: Option<&str> = None;
 
@@ -352,8 +346,7 @@ mod tests {
 
     #[sqlx::test]
     async fn finish(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, session, _, _) = create_test_scenario(&pool).await;
 
         server
             .patch(&format!("/api/session/{}/finish", session.id))
@@ -366,8 +359,7 @@ mod tests {
     // Get all sessions of an users
     #[sqlx::test]
     async fn get_all(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, session, _, _) = create_test_scenario(&pool).await;
 
         let mut test_sessions = vec![session];
 

@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
-use tracing::{debug, info, instrument};
+use tracing::{info, instrument};
 use utoipa::ToSchema;
 use uuid::Uuid;
 

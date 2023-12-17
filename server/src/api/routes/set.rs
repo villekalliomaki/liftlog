@@ -188,8 +188,7 @@ mod tests {
 
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, _, set) = create_test_scenario(&pool).await;
 
         let valid_query = query_set(&server, set.id).await;
 
@@ -202,8 +201,7 @@ mod tests {
 
     #[sqlx::test]
     async fn delete_set(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, _, set) = create_test_scenario(&pool).await;
 
         server
             .delete(&format!("/api/set/{}", set.id))
@@ -219,8 +217,7 @@ mod tests {
     // Negative reps or not whole numbers
     #[sqlx::test]
     async fn set_invalid_reps(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, _, set) = create_test_scenario(&pool).await;
 
         // Negative reps
         server
@@ -239,8 +236,7 @@ mod tests {
 
     #[sqlx::test]
     async fn completion(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, _, set) = create_test_scenario(&pool).await;
 
         server
             .patch(&format!("/api/set/{}", set.id))
@@ -254,8 +250,7 @@ mod tests {
     // That that accuracy is one decimal, so 0.1kg
     #[sqlx::test]
     async fn set_weight(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, _, set) = create_test_scenario(&pool).await;
 
         // Whole number should just work and be converted to a float
         let query_whole_number = server
@@ -290,7 +285,7 @@ mod tests {
 
     #[sqlx::test]
     async fn get_all_for_exercise_instance(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
+        let (server, _, _, exercise, session, exercise_instance, _) =
             create_test_scenario(&pool).await;
 
         // Create a few more

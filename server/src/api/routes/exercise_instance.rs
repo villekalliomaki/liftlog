@@ -275,27 +275,19 @@ pub async fn edit_exercise_instance(
 
 #[cfg(test)]
 mod tests {
-    use axum_test::TestServer;
     use serde_json::json;
     use sqlx::PgPool;
     use uuid::Uuid;
 
     use crate::{
         api::response::RouteSuccess,
-        models::{
-            exercise::Exercise, exercise_instance::ExerciseInstance, session::Session, set::Set,
-            user::User,
-        },
-        test_utils::{
-            api::{create_test_app, get_auth_header},
-            database::create_test_scenario,
-        },
+        models::{exercise_instance::ExerciseInstance, set::Set},
+        test_utils::database::create_test_scenario,
     };
 
     #[sqlx::test]
     async fn create_and_query(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, exercise_instance, _) = create_test_scenario(&pool).await;
 
         // Query instance
         let valid_query = server
@@ -316,8 +308,7 @@ mod tests {
 
     #[sqlx::test]
     async fn edit_comments(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, exercise_instance, _) = create_test_scenario(&pool).await;
 
         // Add 3 comments
         for i in 0..3 {
@@ -367,8 +358,7 @@ mod tests {
     // Try to change to an invalid exercise
     #[sqlx::test]
     async fn change_exercise(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, exercise_instance, _) = create_test_scenario(&pool).await;
 
         server
             .patch(&format!("/api/exercise_instance/{}", exercise_instance.id))
@@ -380,8 +370,7 @@ mod tests {
     // Delete with sets linked to the instance
     #[sqlx::test]
     async fn delete_with_sets(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, _, _, exercise_instance, _) = create_test_scenario(&pool).await;
 
         // Create a few sets
         let mut sets: Vec<Set> = vec![];
@@ -415,9 +404,11 @@ mod tests {
     // Try to delete an exercise which is used in an instance
     #[sqlx::test]
     async fn try_delete_used_exercise(pool: PgPool) {
-        let (server, user, access_token, exercise, session, exercise_instance, set) =
-            create_test_scenario(&pool).await;
+        let (server, _, _, exercise, _, _, _) = create_test_scenario(&pool).await;
 
-        assert!(exercise.delete(&pool).await.is_err());
+        server
+            .delete(&format!("/api/exercise/{}", exercise.id))
+            .await
+            .assert_status_failure();
     }
 }
