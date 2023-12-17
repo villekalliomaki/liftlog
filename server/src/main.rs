@@ -13,22 +13,25 @@ use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    let current_settings = settings::build();
+
+    init_tracing(current_settings.debug);
 
     info!("Starting LiftLog ...");
 
-    let current_setttings = settings::build();
+    let pool = pg::create_pool(&current_settings.database_url).await;
 
-    let pool = pg::create_pool(&current_setttings.database_url).await;
-
-    http_server::start(&current_setttings.listen_address, pool).await;
+    http_server::start(&current_settings.listen_address, pool).await;
 }
 
 // Initialize tracing library for logging
-fn init_tracing() {
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::DEBUG)
-        .finish();
+fn init_tracing(debug: bool) {
+    let level = match debug {
+        true => Level::DEBUG,
+        false => Level::INFO,
+    };
+
+    let subscriber = FmtSubscriber::builder().with_max_level(level).finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 

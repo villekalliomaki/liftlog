@@ -274,8 +274,6 @@ pub async fn edit_exercise_instance(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
     use axum_test::TestServer;
     use serde_json::json;
     use sqlx::PgPool;
@@ -389,7 +387,10 @@ mod tests {
         // Add 3 comments
         for i in 0..3 {
             server
-                .post(&format!("/api/exercise_instance/{}/comment", exercise_instance.id))
+                .post(&format!(
+                    "/api/exercise_instance/{}/comment",
+                    exercise_instance.id
+                ))
                 .json(&json!({"new_comment": format!("Comment {}", i)}))
                 .await
                 .assert_status_success();

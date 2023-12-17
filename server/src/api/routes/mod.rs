@@ -76,6 +76,10 @@ pub fn build_router(pool: PgPool) -> Router {
             exercise_instance::create_exercise_instance,
             exercise_instance::get_exercise_instance_by_id,
             exercise_instance::delete_exercise_instance_by_id,
+            exercise_instance::edit_exercise_instance,
+            exercise_instance::add_exercise_instance_comment,
+            exercise_instance::set_exercise_instance_comment,
+            exercise_instance::delete_exercise_instance_comment,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -99,6 +103,7 @@ pub fn build_router(pool: PgPool) -> Router {
             routes::exercise::CreateExerciseInput,
             routes::exercise::EditExerciseInput,
             routes::session::CreateSessionInput,
+            routes::session::EditSessionInput,
             routes::exercise_instance::CreateExerciseInstanceInput,
             routes::exercise_instance::CreateExerciseInstanceCommentInput,
             routes::exercise_instance::SetExerciseInstanceCommentInput,

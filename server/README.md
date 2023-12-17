@@ -7,11 +7,13 @@ A REST API written in Rust.
 Currently configured with environment variables or with an .env file in the working directory. Example .env file below.
 
 ```
-LIFTLOG_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1/liftlog"
-LIFTLOG_LISTEN_ADDRESS="127.0.0.1:3000"
+LIFTLOG_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1/liftlog
+LIFTLOG_LISTEN_ADDRESS=127.0.0.1:3000
+LIFTLOG_DEBUG=TRUE
 
 # For sqlx-cli
-DATABASE_URL="postgresql://postgres:postgres@127.0.0.1/liftlog"
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1/liftlog
+
 ```
 
 ## Running
