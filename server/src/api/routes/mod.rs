@@ -73,6 +73,9 @@ pub fn build_router(pool: PgPool) -> Router {
             session::get_session_by_id,
             session::finish_session,
             session::get_all_user_sessions,
+            exercise_instance::create_exercise_instance,
+            exercise_instance::get_exercise_instance_by_id,
+            exercise_instance::delete_exercise_instance_by_id,
         ),
         modifiers(&SecurityAddon),
         tags(
@@ -96,6 +99,10 @@ pub fn build_router(pool: PgPool) -> Router {
             routes::exercise::CreateExerciseInput,
             routes::exercise::EditExerciseInput,
             routes::session::CreateSessionInput,
+            routes::exercise_instance::CreateExerciseInstanceInput,
+            routes::exercise_instance::CreateExerciseInstanceCommentInput,
+            routes::exercise_instance::SetExerciseInstanceCommentInput,
+            routes::exercise_instance::EditExerciseInstanceInput,
         ))
     )]
     struct ApiDoc;
@@ -146,12 +153,40 @@ pub fn build_router(pool: PgPool) -> Router {
         .route("/:session_id", get(session::get_session_by_id))
         .route("/:session_id/finish", patch(session::finish_session));
 
+    let exercise_instance_router = Router::new()
+        .route("/", post(exercise_instance::create_exercise_instance))
+        .route(
+            "/:exercise_instance_id",
+            get(exercise_instance::get_exercise_instance_by_id),
+        )
+        .route(
+            "/:exercise_instance_id",
+            delete(exercise_instance::delete_exercise_instance_by_id),
+        )
+        .route(
+            "/:exercise_instance_id",
+            patch(exercise_instance::edit_exercise_instance),
+        )
+        .route(
+            "/:exercise_instance_id/comment",
+            post(exercise_instance::add_exercise_instance_comment),
+        )
+        .route(
+            "/:exercise_instance_id/comment/:comment_index",
+            patch(exercise_instance::set_exercise_instance_comment),
+        )
+        .route(
+            "/:exercise_instance_id/comment/:comment_index",
+            delete(exercise_instance::delete_exercise_instance_comment),
+        );
+
     let api_router = Router::new()
         .route("/ping", get(ping::handle))
         .nest("/user", user_router)
         .nest("/access_token", access_token_router)
         .nest("/exercise", exercise_router)
-        .nest("/session", session_router);
+        .nest("/session", session_router)
+        .nest("/exercise_instance", exercise_instance_router);
 
     Router::new()
         .merge(SwaggerUi::new("/docs/swagger_ui").url("/docs/spec/openapi.json", ApiDoc::openapi()))

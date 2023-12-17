@@ -1,6 +1,8 @@
+use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
+use tracing::{info, instrument};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -28,11 +30,29 @@ pub struct Set {
 
 impl Set {
     // Create a new set uncompleted withtout weight or reps set
+    #[instrument]
     pub async fn new(
         user_id: Uuid,
         exercise_instance_id: Uuid,
         pool: &PgPool,
     ) -> Result<Self, RouteError> {
+        info!("Creating new set");
+
+        let exercise_instance_owner =
+            sqlx::query("SELECT id FROM exercise_instances WHERE id = $1 AND user_id = $2")
+                .bind(exercise_instance_id)
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await?;
+
+        if exercise_instance_owner.is_none() {
+            return Err(RouteError::new(
+                "Invalid exercise instance ID",
+                Some("session_id"),
+                StatusCode::BAD_REQUEST,
+            ));
+        }
+
         Ok(sqlx::query_as!(
             Set,
             "INSERT INTO sets (user_id, exercise_instance_id) VALUES ($1, $2) RETURNING *;",
@@ -44,7 +64,10 @@ impl Set {
     }
 
     // Get from ID and user
+    #[instrument]
     pub async fn from_id(user_id: Uuid, set_id: Uuid, pool: &PgPool) -> Result<Self, RouteError> {
+        info!("Querying a set based on ID");
+
         Ok(sqlx::query_as!(
             Set,
             "SELECT * FROM sets WHERE user_id = $1 AND id = $2",
@@ -56,7 +79,10 @@ impl Set {
     }
 
     // Delete set without modifying anythign else
+    #[instrument]
     pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
+        info!("Deleting set (self)");
+
         sqlx::query!("DELETE FROM sets WHERE id = $1", self.id)
             .execute(pool)
             .await?;
@@ -64,11 +90,14 @@ impl Set {
         Ok(self.id)
     }
 
+    #[instrument]
     pub async fn set_weight(
         &mut self,
         weight: Option<f32>,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        info!("Updating set weight");
+
         self.weight = sqlx::query!(
             "UPDATE sets SET weight = $1 WHERE id = $2 RETURNING weight;",
             weight,
@@ -81,7 +110,10 @@ impl Set {
         Ok(())
     }
 
+    #[instrument]
     pub async fn set_reps(&mut self, reps: Option<i32>, pool: &PgPool) -> Result<(), RouteError> {
+        info!("Updating set reps");
+
         self.reps = sqlx::query!(
             "UPDATE sets SET reps = $1 WHERE id = $2 RETURNING reps;",
             reps,
@@ -102,7 +134,10 @@ impl Set {
         self.set_completed_state(false, pool).await
     }
 
+    #[instrument]
     async fn set_completed_state(&mut self, state: bool, pool: &PgPool) -> Result<(), RouteError> {
+        info!("Updating set completion state");
+
         self.completed = sqlx::query!(
             "UPDATE sets SET completed = $1 WHERE id = $2 RETURNING completed;",
             state,
@@ -117,11 +152,16 @@ impl Set {
 }
 
 // Helper function to get all sets related to one exercise instance
+//
+// WARNING: User ownership of session IS NOT CHECKED
+#[instrument]
 pub async fn all_from_exercise_instance_id(
     user_id: Uuid,
     exercise_instance_id: Uuid,
     pool: &PgPool,
 ) -> Result<Vec<Set>, RouteError> {
+    info!("Querying all sets of one exercise instance");
+
     Ok(sqlx::query_as(
         "SELECT * FROM sets WHERE user_id = $1 AND exercise_instance_id = $2 ORDER BY created",
     )

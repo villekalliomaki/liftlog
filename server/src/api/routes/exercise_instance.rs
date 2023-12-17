@@ -1,5 +1,281 @@
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
+use serde::Deserialize;
+use sqlx::PgPool;
+use utoipa::ToSchema;
+use uuid::Uuid;
+use validator::Validate;
+
+use crate::{
+    api::response::{RouteResponse, RouteSuccess},
+    models::{exercise_instance::ExerciseInstance, user::User},
+};
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CreateExerciseInstanceInput {
+    session_id: Uuid,
+    exercise_id: Uuid,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/exercise_instance",
+    request_body = CreateExerciseInstanceInput,
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = CREATED, description = "New exercise instance created", body = RouteSuccessExerciseInstance),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for exercise instance", body = RouteError),
+    )
+)]
+pub async fn create_exercise_instance(
+    user: User,
+    State(pool): State<PgPool>,
+    Json(body): Json<CreateExerciseInstanceInput>,
+) -> RouteResponse<ExerciseInstance> {
+    Ok(RouteSuccess::new(
+        "New exercise instance created.",
+        ExerciseInstance::new(user.id, body.session_id, body.exercise_id, &pool).await?,
+        StatusCode::CREATED,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/exercise_instance/{exercise_instance_id}",
+    params(
+        ("exercise_instance_id" = Uuid, Path, description = "The ID of the exercise instance")
+    ),
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = FOUND, description = "Exercise instance found", body = RouteSuccessExerciseInstance),
+        (status = NOT_FOUND, description = "Exercise instance not found", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid ID format", body = RouteError),
+    )
+)]
+pub async fn get_exercise_instance_by_id(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_instance_id): Path<Uuid>,
+) -> RouteResponse<ExerciseInstance> {
+    Ok(RouteSuccess::new(
+        "Found exercise instance.",
+        ExerciseInstance::from_id(user.id, exercise_instance_id, &pool).await?,
+        StatusCode::FOUND,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/exercise_instance/{exercise_instance_id}",
+    params(
+        ("exercise_instance_id" = Uuid, Path, description = "The ID of the exercise instance being deleted")
+    ),
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "Exercise instance found and deleted", body = RouteSuccessUuid),
+        (status = NOT_FOUND, description = "Exercise instance not found", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid ID format", body = RouteError),
+    )
+)]
+pub async fn delete_exercise_instance_by_id(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_instance_id): Path<Uuid>,
+) -> RouteResponse<Uuid> {
+    Ok(RouteSuccess::new(
+        "Exercise instance and sets related to it deleted.",
+        ExerciseInstance::from_id(user.id, exercise_instance_id, &pool)
+            .await?
+            .delete(&pool)
+            .await?,
+        StatusCode::OK,
+    ))
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateExerciseInstanceCommentInput {
+    #[validate(length(min = 1, max = 1000, message = "must be between 1 and 1000 characters"))]
+    new_comment: String,
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/exercise_instance/{exercise_instance_id}/comment",
+    params(
+        ("exercise_instance_id" = Uuid, Path, description = "The ID of the exercise instance being deleted")
+    ),
+    request_body = CreateExerciseInstanceCommentInput,
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "Comment added to exercise instance", body = RouteSuccessExerciseInstance),
+        (status = NOT_FOUND, description = "Exercise instance not found", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for exercise instance", body = RouteError),
+    )
+)]
+pub async fn add_exercise_instance_comment(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_instance_id): Path<Uuid>,
+    Json(body): Json<CreateExerciseInstanceCommentInput>,
+) -> RouteResponse<ExerciseInstance> {
+    body.validate()?;
+
+    let mut exercise_instance =
+        ExerciseInstance::from_id(user.id, exercise_instance_id, &pool).await?;
+
+    exercise_instance
+        .add_comment(body.new_comment, &pool)
+        .await?;
+
+    Ok(RouteSuccess::new(
+        "Appended a new comment.",
+        exercise_instance,
+        StatusCode::OK,
+    ))
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct SetExerciseInstanceCommentInput {
+    #[validate(length(min = 1, max = 1000, message = "must be between 1 and 1000 characters"))]
+    comment: String,
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/exercise_instance/{exercise_instance_id}/comment/{comment_index}",
+    params(
+        ("exercise_instance_id" = Uuid, Path, description = "The ID of the exercise instance being edited"),
+        ("comment_index" = i32, Path, description = "Index of the comment in exercise instance")
+    ),
+    request_body = SetExerciseInstanceCommentInput,
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "Comment with specified index edited in exercise instance", body = RouteSuccessExerciseInstance),
+        (status = NOT_FOUND, description = "Exercise instance not found", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for edits or index", body = RouteError),
+    )
+)]
+pub async fn set_exercise_instance_comment(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(path_args): Path<(Uuid, i32)>,
+    Json(body): Json<SetExerciseInstanceCommentInput>,
+) -> RouteResponse<ExerciseInstance> {
+    body.validate()?;
+
+    let mut exercise_instance = ExerciseInstance::from_id(user.id, path_args.0, &pool).await?;
+
+    exercise_instance
+        .set_comment(path_args.1, body.comment, &pool)
+        .await?;
+
+    Ok(RouteSuccess::new(
+        "Comment updated.",
+        exercise_instance,
+        StatusCode::OK,
+    ))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/api/exercise_instance/{exercise_instance_id}/comment/{comment_index}",
+    params(
+        ("exercise_instance_id" = Uuid, Path, description = "The ID of the exercise instance being edited"),
+        ("comment_index" = usize, Path, description = "Index of the comment in exercise instance")
+    ),
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "Comment deleted", body = RouteSuccessUsize),
+        (status = NOT_FOUND, description = "Exercise instance not found", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid index for deletion", body = RouteError),
+    )
+)]
+pub async fn delete_exercise_instance_comment(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(path_args): Path<(Uuid, usize)>,
+) -> RouteResponse<usize> {
+    Ok(RouteSuccess::new(
+        "Deleted comment.",
+        ExerciseInstance::from_id(user.id, path_args.0, &pool)
+            .await?
+            .delete_comment(path_args.1, &pool)
+            .await?,
+        StatusCode::OK,
+    ))
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct EditExerciseInstanceInput {
+    exercise_id: Option<Uuid>,
+    // Could have more editable fields here if added
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/exercise_instance/{exercise_instance_id}",
+    params(
+        ("exercise_instance_id" = Uuid, Path, description = "The ID of the exercise instance being edited"),
+    ),
+    request_body = EditExerciseInstanceInput,
+    security(
+        ("access_token"= [])
+    ),
+    responses(
+        (status = OK, description = "Changes made successfully", body = RouteSuccessExerciseInstance),
+        (status = NOT_FOUND, description = "Exercise instance not found", body = RouteError),
+        (status = UNAUTHORIZED, description = "Invalid authorization token", body = RouteError),
+        (status = BAD_REQUEST, description = "Invalid input for edits", body = RouteError),
+    )
+)]
+pub async fn edit_exercise_instance(
+    user: User,
+    State(pool): State<PgPool>,
+    Path(exercise_instance_id): Path<Uuid>,
+    Json(body): Json<EditExerciseInstanceInput>,
+) -> RouteResponse<ExerciseInstance> {
+    // Not for anything yet but maybe will have more fields in the future
+    body.validate()?;
+
+    let mut exercise_instance =
+        ExerciseInstance::from_id(user.id, exercise_instance_id, &pool).await?;
+
+    if let Some(id) = body.exercise_id {
+        exercise_instance.set_exercise(id, &pool).await?;
+    }
+
+    Ok(RouteSuccess::new(
+        "Requested changes made.",
+        exercise_instance,
+        StatusCode::OK,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use axum_test::TestServer;
     use serde_json::json;
     use sqlx::PgPool;
@@ -110,23 +386,46 @@ mod tests {
     async fn edit_comments(pool: PgPool) {
         let (server, _, _, _, exercise_instance) = init_test_case(&pool).await;
 
-        let comments = vec!["Comment 1", "Comment 2"];
+        // Add 3 comments
+        for i in 0..3 {
+            server
+                .post(&format!("/api/exercise_instance/{}/comment", exercise_instance.id))
+                .json(&json!({"new_comment": format!("Comment {}", i)}))
+                .await
+                .assert_status_success();
+        }
 
-        let edited = server
-            .patch(&format!("/api/exercise_instance/{}", exercise_instance.id))
-            .json(&json!({"comments": comments}))
+        // Delete comment at index 1 (middle one)
+        server
+            .delete(&format!(
+                "/api/exercise_instance/{}/comment/1",
+                exercise_instance.id
+            ))
+            .await
+            .assert_status_success();
+
+        // Edit comment at 0
+        server
+            .patch(&format!(
+                "/api/exercise_instance/{}/comment/0",
+                exercise_instance.id
+            ))
+            .json(&json!({"comment": "Comment"}))
+            .await
+            .assert_status_success();
+
+        // Get comments
+        let query = server
+            .get(&format!("/api/exercise_instance/{}", exercise_instance.id))
             .await
             .json::<RouteSuccess<ExerciseInstance>>()
             .data;
 
-        assert_eq!(
-            edited.comments,
-            // Could work just fine comparing String to &str
-            comments
-                .into_iter()
-                .map(|i| i.to_string())
-                .collect::<Vec<String>>()
-        );
+        assert_eq!(query.comments.len(), 2);
+        // 1 should be 2 now
+        assert_eq!(query.comments.get(1).unwrap(), "Comment 2");
+        // 0 edited
+        assert_eq!(query.comments.get(0).unwrap(), "Comment");
     }
 
     // Try to change to an invalid exercise
@@ -180,24 +479,5 @@ mod tests {
         let (_, _, _, exercise, _) = init_test_case(&pool).await;
 
         assert!(exercise.delete(&pool).await.is_err());
-    }
-
-    #[sqlx::test]
-    async fn get_all_for_session(pool: PgPool) {
-        let (server, _, session, exercise, _) = init_test_case(&pool).await;
-
-        // Create a few more instances
-        for _ in 1..9 {
-            create_test_exercise_instance(&server, session.id, exercise.id).await;
-        }
-
-        // Get all in this session
-        let all = server
-            .get(&format!("/api/exercise_instance/session/{}", session.id))
-            .await
-            .json::<RouteSuccess<Vec<ExerciseInstance>>>()
-            .data;
-
-        assert_eq!(all.len(), 10);
     }
 }

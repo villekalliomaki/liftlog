@@ -15,7 +15,7 @@ use crate::models::{access_token::AccessToken, exercise::Exercise, session::Sess
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ToSchema)]
 // All different generics appering in API documentation have
 // to be defined manually because some utoipa limitation...
-#[aliases(RouteSuccessUuid = RouteSuccess<Uuid>, RouteSuccessString = RouteSuccess<String>, RouteSuccessAccessToken = RouteSuccess<AccessToken>, RouteSuccessUser = RouteSuccess<User>, RouteSuccessExercise = RouteSuccess<Exercise>, RouteSuccessExerciseVec = RouteSuccess<Vec<Exercise>>, RouteSuccessSession = RouteSuccess<Session>, RouteSuccessSessionVec = RouteSuccess<Vec<Session>>, RouteSuccessExerciseInstance = RouteSuccess<ExerciseInstance>, RouteSuccessExerciseInstanceVec = RouteSuccess<Vec<ExerciseInstance>>)]
+#[aliases(RouteSuccessUuid = RouteSuccess<Uuid>, RouteSuccessString = RouteSuccess<String>, RouteSuccessAccessToken = RouteSuccess<AccessToken>, RouteSuccessUser = RouteSuccess<User>, RouteSuccessExercise = RouteSuccess<Exercise>, RouteSuccessExerciseVec = RouteSuccess<Vec<Exercise>>, RouteSuccessSession = RouteSuccess<Session>, RouteSuccessSessionVec = RouteSuccess<Vec<Session>>, RouteSuccessExerciseInstance = RouteSuccess<ExerciseInstance>, RouteSuccessExerciseInstanceVec = RouteSuccess<Vec<ExerciseInstance>>, RouteSuccessUsize = RouteSuccess<usize>)]
 pub struct RouteSuccess<D>
 where
     D: Serialize + Debug,

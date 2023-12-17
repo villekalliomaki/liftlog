@@ -2,8 +2,8 @@ use std::fmt::{Debug, Display};
 
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, prelude::FromRow};
-use tracing::{debug, info};
+use sqlx::{prelude::FromRow, PgPool};
+use tracing::{debug, info, instrument};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -45,6 +45,7 @@ pub enum ExerciseKind {
 
 impl Exercise {
     // Creates a new exercise for the given user
+    #[instrument]
     pub async fn new(
         user_id: Uuid,
         name: impl ToString + Display + Debug,
@@ -75,6 +76,7 @@ impl Exercise {
     }
 
     // Get an exercise from IDs
+    #[instrument]
     pub async fn from_id(
         user_id: Uuid,
         exercise_id: Uuid,
@@ -96,6 +98,7 @@ impl Exercise {
     }
 
     // Deletes self
+    #[instrument]
     pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
         info!("Deleting exercise {}", self.id);
 
@@ -119,21 +122,26 @@ impl Exercise {
     }
 
     // Enable favourite state
+    #[instrument]
     pub async fn enable_favourite(&mut self, pool: &PgPool) -> Result<(), RouteError> {
         self.set_favourite_state(true, pool).await
     }
 
     // Disable favourite state
+    #[instrument]
     pub async fn disable_favourite(&mut self, pool: &PgPool) -> Result<(), RouteError> {
         self.set_favourite_state(false, pool).await
     }
 
     // Helped to toggle favourite state
+    #[instrument]
     async fn set_favourite_state(
         &mut self,
         favorite: bool,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        info!("Setting favourite state of exercise");
+
         let favourite_updated = sqlx::query!(
             "UPDATE exercises SET favourite = $1 WHERE id = $2 AND user_id = $3 RETURNING favourite",
             favorite,
@@ -147,11 +155,14 @@ impl Exercise {
     }
 
     // Change what kind of exercise this is
+    #[instrument]
     pub async fn set_kind(
         &mut self,
         new_kind: ExerciseKind,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        info!("Setting exercise kind");
+
         self.kind = sqlx::query!(
             r#"UPDATE exercises SET kind = $1 WHERE id = $2 AND user_id = $3 RETURNING kind AS "kind: ExerciseKind""#,
             new_kind as _,
@@ -163,11 +174,14 @@ impl Exercise {
     }
 
     // Change the name, overwrites to null if set to None
+    #[instrument]
     pub async fn set_name(
         &mut self,
         new_name: impl ToString + Display + Debug,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        info!("Setting exercise name");
+
         self.name = sqlx::query!(
             "UPDATE exercises SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING name",
             new_name.to_string(),
@@ -182,11 +196,14 @@ impl Exercise {
     }
 
     // Change the description, overwrites to null if set to None
+    #[instrument]
     pub async fn set_description(
         &mut self,
         new_description: Option<impl ToString + Display + Debug>,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        info!("Updating exercise description");
+
         self.description = sqlx::query!(
             "UPDATE exercises SET description = $1 WHERE id = $2 AND user_id = $3 RETURNING description",
             new_description.map_or(None, |i| Some(i.to_string())),
@@ -201,11 +218,14 @@ impl Exercise {
     }
 
     // Change the notes, overwrites to null if set to None
+    #[instrument]
     pub async fn set_notes(
         &mut self,
         new_notes: Option<impl ToString + Display + Debug>,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        info!("Updating exercise notes");
+
         self.notes = sqlx::query!(
             "UPDATE exercises SET notes = $1 WHERE id = $2 AND user_id = $3 RETURNING notes",
             new_notes.map_or(None, |i| Some(i.to_string())),
@@ -222,11 +242,14 @@ impl Exercise {
 
 // Get all the users exercises, if Kind is specified it's included as a filter
 // Not tested here, because this helper is covered by the route tests
+#[instrument]
 pub async fn all_user_exercises(
     user_id: Uuid,
     optional_kind: Option<ExerciseKind>,
     pool: &PgPool,
 ) -> Result<Vec<Exercise>, RouteError> {
+    info!("Querying all exercises of an user");
+
     match optional_kind {
         Some(kind) => Ok(sqlx::query_as!(
             Exercise,

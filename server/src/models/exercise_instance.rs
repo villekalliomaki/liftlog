@@ -4,12 +4,13 @@ use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, PgPool};
+use tracing::{error, info, instrument};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{api::response::RouteError, models::set};
 
-use super::set::Set;
+use super::{exercise::Exercise, set::Set};
 
 // One instance of an existing exercise, containing:
 // - Comments tied to the session
@@ -41,16 +42,47 @@ pub struct ExerciseInstance {
 
 impl ExerciseInstance {
     // Create a new one with no comments or sets
+    #[instrument]
     pub async fn new(
         user_id: Uuid,
         session_id: Uuid,
         exercise_id: Uuid,
         pool: &PgPool,
     ) -> Result<Self, RouteError> {
+        // Make sure session and exercise are owned by the user
+        let session_owner = sqlx::query("SELECT id FROM sessions WHERE id = $1 AND user_id = $2")
+            .bind(session_id)
+            .bind(user_id)
+            .fetch_optional(pool)
+            .await?;
+
+        let exercise_owner = sqlx::query("SELECT id FROM exercises WHERE id = $1 AND user_id = $2")
+            .bind(exercise_id)
+            .bind(user_id)
+            .fetch_optional(pool)
+            .await?;
+
+        if session_owner.is_none() {
+            return Err(RouteError::new(
+                "Invalid session ID",
+                Some("session_id"),
+                StatusCode::BAD_REQUEST,
+            ));
+        }
+
+        if exercise_owner.is_none() {
+            return Err(RouteError::new(
+                "Invalid exercise ID",
+                Some("exercise_id"),
+                StatusCode::BAD_REQUEST,
+            ));
+        }
+
         Ok(sqlx::query_as("INSERT INTO exercise_instances (user_id, session_id, exercise_id) VALUES ($1, $2, $3) RETURNING *").bind(user_id).bind(session_id).bind(exercise_id).fetch_one(pool).await?)
     }
 
     // Get existing one by ID and user
+    #[instrument]
     pub async fn from_id(
         user_id: Uuid,
         exercise_instance_id: Uuid,
@@ -70,6 +102,7 @@ impl ExerciseInstance {
     }
 
     // Delete the instance and the sets related to it
+    #[instrument]
     pub async fn delete(self, pool: &PgPool) -> Result<Uuid, RouteError> {
         sqlx::query!("DELETE FROM exercise_instances WHERE id = $1", self.id)
             .execute(pool)
@@ -79,6 +112,7 @@ impl ExerciseInstance {
     }
 
     // Add a comment to the instance, always appended to the list
+    #[instrument]
     pub async fn add_comment(
         &mut self,
         comment: impl ToString + Display + Debug,
@@ -96,27 +130,38 @@ impl ExerciseInstance {
     }
 
     // Overwrite a comment of a specific index if it exists
+    #[instrument]
     pub async fn set_comment(
         &mut self,
         index: i32,
         comment: impl ToString + Display + Debug,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
-        self.comments = sqlx::query!(
-            "UPDATE exercise_instances SET comments[$1] = $2 WHERE id = $3 RETURNING comments",
-            index + 1,
-            comment.to_string(),
-            self.id
-        )
-        .fetch_one(pool)
-        .await?
-        .comments;
+        // Check that the index exists and return a clearer error if it doesn't
+        if convert_index_type(index)? + 1 > self.comments.len() {
+            Err(RouteError::new(
+                format!("Comment doesn't exist at index {}.", index),
+                Some("index"),
+                StatusCode::NOT_FOUND,
+            ))
+        } else {
+            self.comments = sqlx::query!(
+                "UPDATE exercise_instances SET comments[$1] = $2 WHERE id = $3 RETURNING comments",
+                index + 1,
+                comment.to_string(),
+                self.id
+            )
+            .fetch_one(pool)
+            .await?
+            .comments;
 
-        Ok(())
+            Ok(())
+        }
     }
 
     // Deleted a comment index if it exists
-    pub async fn delete_comment(&mut self, index: usize, pool: &PgPool) -> Result<(), RouteError> {
+    #[instrument]
+    pub async fn delete_comment(&mut self, index: usize, pool: &PgPool) -> Result<usize, RouteError> {
         match self.comments.get(index) {
             Some(value) => {
                 self.comments = sqlx::query!(
@@ -127,7 +172,7 @@ impl ExerciseInstance {
                 .fetch_one(pool)
                 .await?.comments;
 
-                Ok(())
+                Ok(index)
             }
             None => Err(RouteError::new(
                 "Tried to remove a comment in an exercise instance with invalid index.",
@@ -138,14 +183,18 @@ impl ExerciseInstance {
     }
 
     // Replaces the exercise with the given one if it exists
+    #[instrument]
     pub async fn set_exercise(
         &mut self,
         exercise_id: Uuid,
         pool: &PgPool,
     ) -> Result<(), RouteError> {
+        // Validate ownership of exercise
+        let exercise = Exercise::from_id(self.user_id, exercise_id, pool).await?;
+
         sqlx::query!(
             "UPDATE exercise_instances SET exercise_id = $1 WHERE id = $2",
-            exercise_id,
+            exercise.id,
             self.id
         )
         .execute(pool)
@@ -157,13 +206,36 @@ impl ExerciseInstance {
     }
 }
 
+// Helper to process input indexes
+#[instrument]
+fn convert_index_type(from: i32) -> Result<usize, RouteError> {
+    // sqlx limtits the index to i32 and len is usize...
+    match from.try_into() {
+        Ok(value) => Ok(value),
+        Err(error) => {
+            error!("Failed to convert index from i32 to usize");
+
+            Err(RouteError::new(
+                format!("Failed internal index type conversion: {}", error),
+                Some("index"),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        }
+    }
+}
+
 // Helper to get all exercise instances linked to an user and a session
 // (also gets all sets with a helper function in the sets module)
+//
+// WARNING: User ownership of session IS NOT CHECKED
+#[instrument]
 pub async fn all_from_session_id(
     user_id: Uuid,
     session_id: Uuid,
     pool: &PgPool,
 ) -> Result<Vec<ExerciseInstance>, RouteError> {
+    info!("Querying all exercise instances in one session");
+
     let mut all: Vec<ExerciseInstance> = sqlx::query_as(
         "SELECT * FROM exercise_instances WHERE user_id = $1 AND session_id = $2 ORDER BY created",
     )
