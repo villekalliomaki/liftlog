@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::State, http::StatusCode};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
@@ -115,7 +115,7 @@ pub struct ChangeUsernameInput {
         (status = BAD_REQUEST, description = "Access token missing or malformed", body = RouteError)
     ),
 )]
-pub async fn change_username(mut user: User, State(pool): State<PgPool>, Json(body): Json<ChangeUsernameInput>) -> RouteResponse<User> {
+pub async fn change_username(mut user: User, State(pool): State<PgPool>, ValidatedJson(body): ValidatedJson<ChangeUsernameInput>) -> RouteResponse<User> {
     user.change_username(body.new_username, &pool).await?;
 
     Ok(RouteSuccess::new("Username changed.", user, StatusCode::OK))
@@ -140,7 +140,7 @@ pub struct ChangePasswordInput {
         (status = BAD_REQUEST, description = "Access token missing or malformed", body = RouteError)
     ),
 )]
-pub async fn change_password(mut user: User, State(pool): State<PgPool>, Json(body): Json<ChangePasswordInput>) -> RouteResponse<User> {
+pub async fn change_password(mut user: User, State(pool): State<PgPool>, ValidatedJson(body): ValidatedJson<ChangePasswordInput>) -> RouteResponse<User> {
     user.change_password(body.new_password, &pool).await?;
 
     Ok(RouteSuccess::new("Password changed.", user, StatusCode::OK))

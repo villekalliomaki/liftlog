@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -10,7 +9,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    api::response::{RouteResponse, RouteSuccess},
+    api::{response::{RouteResponse, RouteSuccess}, extractors::json::ValidatedJson},
     models::{
         exercise::{all_user_exercises, Exercise, ExerciseKind},
         user::User,
@@ -61,10 +60,8 @@ pub struct CreateExerciseInput {
 pub async fn create_exercise(
     user: User,
     State(pool): State<PgPool>,
-    Json(body): Json<CreateExerciseInput>,
+    ValidatedJson(body): ValidatedJson<CreateExerciseInput>,
 ) -> RouteResponse<Exercise> {
-    body.validate()?;
-
     let new_exercise = Exercise::new(
         user.id,
         body.name,
@@ -134,10 +131,8 @@ pub async fn edit_exercise(
     user: User,
     State(pool): State<PgPool>,
     Path(exercise_id): Path<Uuid>,
-    Json(body): Json<EditExerciseInput>,
+    ValidatedJson(body): ValidatedJson<EditExerciseInput>,
 ) -> RouteResponse<Exercise> {
-    body.validate()?;
-
     let mut exercise = Exercise::from_id(user.id, exercise_id, &pool).await?;
 
     if let Some(new_name) = body.name {

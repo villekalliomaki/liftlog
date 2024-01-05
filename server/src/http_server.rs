@@ -32,8 +32,7 @@ pub async fn start(addr: &str, pg_pool: PgPool) {
     info!("Starting HTTP server on: http://{}", addr);
 
     // run it with hyper on localhost:3000
-    axum::Server::bind(&parsed_addr)
-        .serve(app_router.into_make_service())
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(&parsed_addr).await.unwrap();
+
+    axum::serve(listener, app_router).await.unwrap();
 }

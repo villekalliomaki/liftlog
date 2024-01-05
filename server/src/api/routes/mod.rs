@@ -1,13 +1,17 @@
 mod access_token;
 mod exercise;
 mod exercise_instance;
+mod fallback;
 mod ping;
 mod session;
 mod set;
 mod user;
 
 use crate::{
-    api::{response::*, routes},
+    api::{
+        response::*,
+        routes::{self, fallback::fallback404},
+    },
     models,
 };
 use axum::{
@@ -212,4 +216,5 @@ pub fn build_router(pool: PgPool) -> Router {
         .merge(RapiDoc::new("/docs/spec/openapi.json").path("/docs/rapidoc"))
         .nest("/api", api_router)
         .with_state(pool)
+        .fallback(fallback404)
 }

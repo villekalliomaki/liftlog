@@ -7,10 +7,10 @@ use argon2::{
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
-    headers::{authorization::Bearer, Authorization},
     http::{request::Parts, StatusCode},
-    RequestPartsExt, TypedHeader,
+    RequestPartsExt,
 };
+use axum_extra::{TypedHeader, headers::{Authorization, authorization::Bearer}};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;

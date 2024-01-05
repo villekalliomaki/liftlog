@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use chrono::Duration;
 use serde::Deserialize;
@@ -11,6 +10,7 @@ use validator::Validate;
 
 use crate::{
     api::{
+        extractors::json::ValidatedJson,
         response::{RouteResponse, RouteSuccess},
         routes::user::REGEX_USERNAME,
     },
@@ -50,10 +50,8 @@ pub struct CreateAccessTokenInput {
 )]
 pub async fn create_access_token(
     State(pool): State<PgPool>,
-    Json(body): Json<CreateAccessTokenInput>,
+    ValidatedJson(body): ValidatedJson<CreateAccessTokenInput>,
 ) -> RouteResponse<AccessToken> {
-    body.validate()?;
-
     let user = User::from_credentials(body.username, body.password, &pool).await?;
 
     let duration = Duration::seconds(body.validity_in_seconds.into());

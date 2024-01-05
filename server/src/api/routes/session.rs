@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -10,7 +9,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    api::response::{RouteResponse, RouteSuccess},
+    api::{
+        extractors::json::ValidatedJson,
+        response::{RouteResponse, RouteSuccess},
+    },
     models::{
         session::{self, Session},
         user::User,
@@ -47,7 +49,7 @@ pub struct CreateSessionInput {
 pub async fn create_session(
     user: User,
     State(pool): State<PgPool>,
-    Json(body): Json<CreateSessionInput>,
+    ValidatedJson(body): ValidatedJson<CreateSessionInput>,
 ) -> RouteResponse<Session> {
     body.validate()?;
 
@@ -96,10 +98,8 @@ pub async fn edit_session(
     user: User,
     State(pool): State<PgPool>,
     Path(session_id): Path<Uuid>,
-    Json(body): Json<EditSessionInput>,
+    ValidatedJson(body): ValidatedJson<EditSessionInput>,
 ) -> RouteResponse<Session> {
-    body.validate()?;
-
     let mut session = Session::from_id(user.id, session_id, &pool).await?;
 
     if let Some(new_name) = body.name {

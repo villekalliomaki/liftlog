@@ -1,21 +1,24 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use serde::Deserialize;
 use sqlx::PgPool;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
-    api::response::{RouteResponse, RouteSuccess},
+    api::{
+        extractors::json::ValidatedJson,
+        response::{RouteResponse, RouteSuccess},
+    },
     models::{set::Set, user::User},
 };
 
 use super::deserialize_optional_option;
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, ToSchema)]
 pub struct CreateSetInput {
     exercise_instance_id: Uuid,
 }
@@ -37,7 +40,7 @@ pub struct CreateSetInput {
 pub async fn create_set(
     user: User,
     State(pool): State<PgPool>,
-    Json(body): Json<CreateSetInput>,
+    ValidatedJson(body): ValidatedJson<CreateSetInput>,
 ) -> RouteResponse<Set> {
     Ok(RouteSuccess::new(
         "New set created without reps or weight.",
@@ -105,7 +108,7 @@ pub async fn delete_set(
     ))
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, ToSchema)]
 pub struct EditSetInput {
     #[serde(default, deserialize_with = "deserialize_optional_option")]
     weight: Option<Option<f32>>,
@@ -135,7 +138,7 @@ pub async fn edit_set(
     user: User,
     State(pool): State<PgPool>,
     Path(set_id): Path<Uuid>,
-    Json(body): Json<EditSetInput>,
+    ValidatedJson(body): ValidatedJson<EditSetInput>,
 ) -> RouteResponse<Set> {
     let mut set = Set::from_id(user.id, set_id, &pool).await?;
 
@@ -172,9 +175,7 @@ mod tests {
     use crate::{
         api::response::RouteSuccess,
         models::{exercise_instance::ExerciseInstance, set::Set},
-        test_utils::api::{
-            create_test_exercise_instance, create_test_scenario, create_test_set,
-        },
+        test_utils::api::{create_test_exercise_instance, create_test_scenario, create_test_set},
     };
 
     // Queries set over API and panics on failure

@@ -35,7 +35,8 @@ To clean database, use this after connecting to it with the above command: `DROP
 An OpenAPI spec is generated automatically with [utoipa](https://docs.rs/utoipa/latest/utoipa/).
 
 For a local instance:
-- [Swagger UI](http://127.0.0.1:3000/docs/swagger_ui/)
-- [Redoc](http://127.0.0.1:3000/docs/redoc)
-- [Rapidoc](http://127.0.0.1:3000/docs/rapidoc)
-- [Plain OpenAPI spec](http://127.0.0.1:3000/docs/spec/openapi.json)
+
+-   [Swagger UI](http://127.0.0.1:3000/docs/swagger_ui/)
+-   [Redoc](http://127.0.0.1:3000/docs/redoc)
+-   [Rapidoc](http://127.0.0.1:3000/docs/rapidoc)
+-   [Plain OpenAPI spec](http://127.0.0.1:3000/docs/spec/openapi.json)
