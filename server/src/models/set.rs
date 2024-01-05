@@ -211,7 +211,7 @@ mod tests {
             session::Session,
             user::User,
         },
-        test_utils::database::create_test_user,
+        test_utils::api::create_test_user,
     };
 
     use super::*;

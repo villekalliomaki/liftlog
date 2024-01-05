@@ -272,7 +272,7 @@ pub async fn all_user_exercises(
 mod tests {
     use sqlx::PgPool;
 
-    use crate::{models::user::User, test_utils::database::create_test_user};
+    use crate::{models::user::User, test_utils::api::create_test_user};
 
     use super::*;
 

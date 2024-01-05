@@ -8,7 +8,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    api::response::{RouteResponse, RouteSuccess},
+    api::{response::{RouteResponse, RouteSuccess}, extractors::json::ValidatedJson},
     models::user::User,
 };
 
@@ -43,10 +43,8 @@ pub struct CreateUserInput {
 // New user from the username and password provided
 pub async fn create_user(
     State(pool): State<PgPool>,
-    Json(body): Json<CreateUserInput>,
+    ValidatedJson(body): ValidatedJson<CreateUserInput>,
 ) -> RouteResponse<User> {
-    body.validate()?;
-
     Ok(RouteSuccess::new(
         "New user created.",
         User::new(body.username, body.password, &pool).await?,

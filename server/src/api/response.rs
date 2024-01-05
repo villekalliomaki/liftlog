@@ -4,7 +4,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use tracing::{debug, error, instrument, warn};
+use tracing::{debug, error, info, instrument, warn};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -177,8 +177,37 @@ impl From<sqlx::error::Error> for RouteError {
     fn from(error: sqlx::error::Error) -> Self {
         debug!("Converting sqlx::error::Error to a RouteError");
 
+        use sqlx::error::Error;
+
         match error {
-            // TODO: implement user-facing enum variants
+            Error::RowNotFound => RouteError::new(
+                "Not found in database.",
+                None::<&str>,
+                StatusCode::NOT_FOUND,
+            ),
+            Error::Io(err) => {
+                error!("Database backend communication failed: {}", err);
+
+                RouteError::new(
+                    "Database backend communication failed.",
+                    None::<&str>,
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                )
+            }
+            Error::Database(err) => {
+                info!("Database returned an error: {}", err.message());
+
+                RouteError::new(
+                    format!("Database returned an error: {}", err.message()),
+                    None::<&str>,
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                )
+            }
+            Error::PoolTimedOut => RouteError::new(
+                "Database pool timeout.",
+                None::<&str>,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
             _ => {
                 warn!("Encountered an unimplemented database error: {}. API will respond, but with a generic error.", error);
 

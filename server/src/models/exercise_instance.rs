@@ -266,7 +266,7 @@ mod tests {
             exercise::{Exercise, ExerciseKind},
             session::Session,
         },
-        test_utils::database::create_test_scenario,
+        test_utils::api::create_test_scenario,
     };
 
     use super::*;

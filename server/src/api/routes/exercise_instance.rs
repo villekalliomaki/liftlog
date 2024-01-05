@@ -282,7 +282,7 @@ mod tests {
     use crate::{
         api::response::RouteSuccess,
         models::{exercise_instance::ExerciseInstance, set::Set},
-        test_utils::database::create_test_scenario,
+        test_utils::api::create_test_scenario,
     };
 
     #[sqlx::test]

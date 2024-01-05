@@ -241,7 +241,7 @@ mod tests {
     use crate::{
         api::response::RouteSuccess,
         models::session::Session,
-        test_utils::database::{
+        test_utils::api::{
             create_test_exercise, create_test_exercise_instance, create_test_scenario,
             create_test_session,
         },

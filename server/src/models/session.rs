@@ -176,7 +176,7 @@ pub async fn all_user_sessions(user_id: Uuid, pool: &PgPool) -> Result<Vec<Sessi
 mod tests {
     use sqlx::PgPool;
 
-    use crate::{api::response::RouteError, models::user::User, test_utils::database::create_test_user};
+    use crate::{api::response::RouteError, models::user::User, test_utils::api::create_test_user};
 
     use super::*;
 

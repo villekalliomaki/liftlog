@@ -146,7 +146,7 @@ impl AccessToken {
 mod tests {
     use sqlx::PgPool;
 
-    use crate::test_utils::database::create_test_user;
+    use crate::test_utils::api::create_test_user;
 
     use super::*;
 
