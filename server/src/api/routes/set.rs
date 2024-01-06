@@ -139,6 +139,9 @@ pub async fn edit_set(
 ) -> RouteResponse<Set> {
     let mut set = Set::from_id(user.id, set_id, &pool).await?;
 
+    // Weight and reps are edited first, because they have to exist
+    // to complete the set
+
     if let Some(weight) = body.weight {
         set.set_weight(weight, &pool).await?
     }
@@ -238,7 +241,7 @@ mod tests {
 
         server
             .patch(&format!("/api/set/{}", set.id))
-            .json(&json!({"completed": true}))
+            .json(&json!({"completed": true, "weight": 10.0, "reps": 1}))
             .await
             .assert_status_success();
 

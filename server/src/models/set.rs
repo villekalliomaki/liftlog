@@ -156,6 +156,14 @@ impl Set {
     }
 
     pub async fn set_complete(&mut self, pool: &PgPool) -> Result<(), RouteError> {
+        if self.weight.is_none() || self.reps.is_none() {
+            return Err(RouteError::new(
+                "Weight or reps aren't set, so it can't be completed.",
+                None::<&str>,
+                StatusCode::BAD_REQUEST,
+            ));
+        }
+
         self.set_completed_state(true, pool).await
     }
 
@@ -334,7 +342,14 @@ mod tests {
     async fn mark_completed(pool: PgPool) {
         let (user, _, _, exercise_instance, mut set) = create_test_set(&pool).await;
 
-        set.set_complete(&pool).await.unwrap();
+        // Should fail because weight or reps are not set
+        assert!(set.set_complete(&pool).await.is_err());
+
+        set.set_reps(Some(1), &pool).await.unwrap();
+        set.set_weight(Some(10.0), &pool).await.unwrap();
+
+        // Should work now
+        assert!(set.set_complete(&pool).await.is_ok());
 
         assert!(
             query_test_sets(&user, &exercise_instance, &pool)
