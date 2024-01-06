@@ -1,7 +1,4 @@
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-};
+use axum::{extract::State, http::StatusCode};
 use chrono::Duration;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -10,7 +7,7 @@ use validator::Validate;
 
 use crate::{
     api::{
-        extractors::json::ValidatedJson,
+        extractors::{json::ValidatedJson, path::Path},
         response::{RouteResponse, RouteSuccess},
         routes::user::REGEX_USERNAME,
     },

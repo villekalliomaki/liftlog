@@ -1,7 +1,4 @@
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-};
+use axum::{extract::State, http::StatusCode};
 use serde::Deserialize;
 use sqlx::PgPool;
 use utoipa::ToSchema;
@@ -9,7 +6,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    api::{response::{RouteResponse, RouteSuccess}, extractors::json::ValidatedJson},
+    api::{
+        extractors::{json::ValidatedJson, path::Path},
+        response::{RouteResponse, RouteSuccess},
+    },
     models::{
         exercise::{all_user_exercises, Exercise, ExerciseKind},
         user::User,
