@@ -1,0 +1,2574 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "liftlog_server",
+        "description": "",
+        "license": {
+            "name": ""
+        },
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/api/access_token": {
+            "post": {
+                "tags": [
+                    "access_token"
+                ],
+                "operationId": "create_access_token",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateAccessTokenInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "New token created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessAccessToken"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Wrong password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Username not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Password hashing failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/access_token/{token}": {
+            "delete": {
+                "tags": [
+                    "access_token"
+                ],
+                "operationId": "delete_token",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "The token being deleted",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessString"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Access token missing or malformed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid access token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/exercise": {
+            "post": {
+                "tags": [
+                    "exercise"
+                ],
+                "operationId": "create_exercise",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateExerciseInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "New exercise created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExercise"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for exercise",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise/all": {
+            "get": {
+                "tags": [
+                    "exercise"
+                ],
+                "operationId": "get_user_exercises",
+                "responses": {
+                    "200": {
+                        "description": "Exercises returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseVec"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise/all/{exercise_kind}": {
+            "get": {
+                "tags": [
+                    "exercise"
+                ],
+                "operationId": "get_user_exercises_by_kind",
+                "parameters": [
+                    {
+                        "name": "exercise_kind",
+                        "in": "path",
+                        "description": "The ID of the exercise requested",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exercises returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseVec"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid exercise kind format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise/{exercise_id}": {
+            "get": {
+                "tags": [
+                    "exercise"
+                ],
+                "operationId": "get_exercise_by_id",
+                "parameters": [
+                    {
+                        "name": "exercise_id",
+                        "in": "path",
+                        "description": "The ID of the exercise requested",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exercise found and returned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExercise"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid exercise ID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "exercise"
+                ],
+                "operationId": "delete_exercise_by_id",
+                "parameters": [
+                    {
+                        "name": "exercise_id",
+                        "in": "path",
+                        "description": "The ID of the exercise requested",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exercise found and deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUuid"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid exercise ID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "exercise"
+                ],
+                "operationId": "edit_exercise",
+                "parameters": [
+                    {
+                        "name": "exercise_id",
+                        "in": "path",
+                        "description": "The ID of the edited exercise",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditExerciseInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Exercise updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExercise"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid exercise ID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise_instance": {
+            "post": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "create_exercise_instance",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateExerciseInstanceInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "New exercise instance created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseInstance"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for exercise instance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise or session not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise_instance/{exercise_instance_id}": {
+            "get": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "get_exercise_instance_by_id",
+                "parameters": [
+                    {
+                        "name": "exercise_instance_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Exercise instance found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseInstance"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "delete_exercise_instance_by_id",
+                "parameters": [
+                    {
+                        "name": "exercise_instance_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance being deleted",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exercise instance found and deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUuid"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "edit_exercise_instance",
+                "parameters": [
+                    {
+                        "name": "exercise_instance_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance being edited",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditExerciseInstanceInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Changes made successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseInstance"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for edits",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise_instance/{exercise_instance_id}/comment": {
+            "post": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "add_exercise_instance_comment",
+                "parameters": [
+                    {
+                        "name": "exercise_instance_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance being deleted",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateExerciseInstanceCommentInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Comment added to exercise instance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseInstance"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for exercise instance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/exercise_instance/{exercise_instance_id}/comment/{comment_index}": {
+            "delete": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "delete_exercise_instance_comment",
+                "parameters": [
+                    {
+                        "name": "exercise_instance_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance being edited",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "comment_index",
+                        "in": "path",
+                        "description": "Index of the comment in exercise instance",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Comment deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUsize"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid index for deletion",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "exercise_instance"
+                ],
+                "operationId": "set_exercise_instance_comment",
+                "parameters": [
+                    {
+                        "name": "exercise_instance_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance being edited",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "comment_index",
+                        "in": "path",
+                        "description": "Index of the comment in exercise instance",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int32"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SetExerciseInstanceCommentInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Comment with specified index edited in exercise instance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessExerciseInstance"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for edits or index",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/ping": {
+            "get": {
+                "tags": [
+                    "ping"
+                ],
+                "operationId": "handle",
+                "responses": {
+                    "200": {
+                        "description": "Ping",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessString"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/session": {
+            "get": {
+                "tags": [
+                    "session"
+                ],
+                "operationId": "get_all_user_sessions",
+                "responses": {
+                    "302": {
+                        "description": "Returned all user's sessions (zero or more)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSessionVec"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "session"
+                ],
+                "operationId": "create_session",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateSessionInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "New session created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSession"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/session/{session_id}": {
+            "get": {
+                "tags": [
+                    "session"
+                ],
+                "operationId": "get_session_by_id",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "description": "The ID of the session requested",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Session found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSession"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid session ID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "session"
+                ],
+                "operationId": "delete_session_by_id",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "description": "The ID of the session being deleted",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session found and deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUuid"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid session ID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "session"
+                ],
+                "operationId": "edit_session",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "description": "The ID of the session edited",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditSessionInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Session modified",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSession"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/session/{session_id}/finish": {
+            "patch": {
+                "tags": [
+                    "session"
+                ],
+                "operationId": "finish_session",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "description": "The ID of the finished session",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session set as finished",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSession"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Invalid session ID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/set": {
+            "post": {
+                "tags": [
+                    "set"
+                ],
+                "operationId": "create_set",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateSetInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "New set created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSet"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for set",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Exercise instance not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/set/{set_id}": {
+            "get": {
+                "tags": [
+                    "set"
+                ],
+                "operationId": "get_set_by_id",
+                "parameters": [
+                    {
+                        "name": "set_id",
+                        "in": "path",
+                        "description": "The ID of the set",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Set found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSet"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Set not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "set"
+                ],
+                "operationId": "delete_set",
+                "parameters": [
+                    {
+                        "name": "set_id",
+                        "in": "path",
+                        "description": "The ID of the set",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Set deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUuid"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Set not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "set"
+                ],
+                "operationId": "edit_set",
+                "parameters": [
+                    {
+                        "name": "set_id",
+                        "in": "path",
+                        "description": "The ID of the exercise instance being edited",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EditSetInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Requseted changes made successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessSet"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input for changes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid authorization token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Set not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/user": {
+            "get": {
+                "tags": [
+                    "user"
+                ],
+                "operationId": "get_self",
+                "responses": {
+                    "200": {
+                        "description": "User found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUser"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Access token missing or malformed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid access token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "user"
+                ],
+                "operationId": "create_user",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateUserInput"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "New user created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUser"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Username already taken",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Password hashing failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "user"
+                ],
+                "operationId": "delete_user",
+                "responses": {
+                    "200": {
+                        "description": "User has been deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUuid"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Access token missing or malformed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid access token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/user/password": {
+            "patch": {
+                "tags": [
+                    "user"
+                ],
+                "operationId": "change_password",
+                "responses": {
+                    "200": {
+                        "description": "Password has been changed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUser"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Access token missing or malformed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid access token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        },
+        "/api/user/username": {
+            "patch": {
+                "tags": [
+                    "user"
+                ],
+                "operationId": "change_username",
+                "responses": {
+                    "200": {
+                        "description": "Username has been changed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessUser"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Access token missing or malformed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid access token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "access_token": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AccessToken": {
+                "type": "object",
+                "required": [
+                    "token",
+                    "created",
+                    "expires",
+                    "user_id"
+                ],
+                "properties": {
+                    "created": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "expires": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "token": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "ChangePasswordInput": {
+                "type": "object",
+                "required": [
+                    "new_password"
+                ],
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "example": "strong_password_with_at_least_10_characters"
+                    }
+                }
+            },
+            "ChangeUsernameInput": {
+                "type": "object",
+                "required": [
+                    "new_username"
+                ],
+                "properties": {
+                    "new_username": {
+                        "type": "string",
+                        "example": "some_username"
+                    }
+                }
+            },
+            "CreateAccessTokenInput": {
+                "type": "object",
+                "required": [
+                    "username",
+                    "password",
+                    "validity_in_seconds"
+                ],
+                "properties": {
+                    "password": {
+                        "type": "string",
+                        "example": "strong_password_with_at_least_10_characters"
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "some_username"
+                    },
+                    "validity_in_seconds": {
+                        "type": "integer",
+                        "format": "int64",
+                        "example": "600"
+                    }
+                }
+            },
+            "CreateExerciseInput": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "kind"
+                ],
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "favourite": {
+                        "type": "boolean"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ExerciseKind"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "CreateExerciseInstanceCommentInput": {
+                "type": "object",
+                "required": [
+                    "new_comment"
+                ],
+                "properties": {
+                    "new_comment": {
+                        "type": "string"
+                    }
+                }
+            },
+            "CreateExerciseInstanceInput": {
+                "type": "object",
+                "required": [
+                    "session_id",
+                    "exercise_id"
+                ],
+                "properties": {
+                    "exercise_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "CreateSessionInput": {
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                }
+            },
+            "CreateSetInput": {
+                "type": "object",
+                "required": [
+                    "exercise_instance_id"
+                ],
+                "properties": {
+                    "exercise_instance_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "CreateUserInput": {
+                "type": "object",
+                "required": [
+                    "username",
+                    "password"
+                ],
+                "properties": {
+                    "password": {
+                        "type": "string",
+                        "example": "strong_password_with_at_least_10_characters"
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "some_username"
+                    }
+                }
+            },
+            "EditExerciseInput": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "favourite": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ExerciseKind"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "EditExerciseInstanceInput": {
+                "type": "object",
+                "properties": {
+                    "exercise_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    }
+                }
+            },
+            "EditSessionInput": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "EditSetInput": {
+                "type": "object",
+                "properties": {
+                    "completed": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "reps": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    },
+                    "weight": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    }
+                }
+            },
+            "Exercise": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "user_id",
+                    "name",
+                    "favourite",
+                    "kind"
+                ],
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "favourite": {
+                        "type": "boolean"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/ExerciseKind"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "ExerciseInstance": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "user_id",
+                    "session_id",
+                    "created",
+                    "exercise_id",
+                    "comments",
+                    "sets"
+                ],
+                "properties": {
+                    "comments": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "created": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "exercise_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "sets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Set"
+                        }
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "ExerciseKind": {
+                "type": "string",
+                "enum": [
+                    "dumbbell",
+                    "barbell",
+                    "cable",
+                    "machine",
+                    "bodyweight"
+                ]
+            },
+            "RouteError": {
+                "type": "object",
+                "required": [
+                    "errors"
+                ],
+                "properties": {
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SingleRouteError"
+                        }
+                    }
+                }
+            },
+            "RouteSuccessAccessToken": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/AccessToken"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessExercise": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/Exercise"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessExerciseInstance": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/ExerciseInstance"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessExerciseInstanceVec": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ExerciseInstance"
+                        }
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessExerciseVec": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Exercise"
+                        }
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessSession": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/Session"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessSessionVec": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Session"
+                        }
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessSet": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/Set"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessString": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "string"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessUser": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessUsize": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "RouteSuccessUuid": {
+                "type": "object",
+                "required": [
+                    "msg",
+                    "data"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Request was successful."
+                    }
+                }
+            },
+            "Session": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "user_id",
+                    "name",
+                    "started",
+                    "exercise_instances"
+                ],
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "exercise_instances": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ExerciseInstance"
+                        }
+                    },
+                    "finished": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "started": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            },
+            "Set": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "user_id",
+                    "exercise_instance_id",
+                    "completed",
+                    "created"
+                ],
+                "properties": {
+                    "completed": {
+                        "type": "boolean"
+                    },
+                    "created": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "exercise_instance_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "reps": {
+                        "type": "integer",
+                        "format": "int32",
+                        "nullable": true
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "weight": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    }
+                }
+            },
+            "SetExerciseInstanceCommentInput": {
+                "type": "object",
+                "required": [
+                    "comment"
+                ],
+                "properties": {
+                    "comment": {
+                        "type": "string"
+                    }
+                }
+            },
+            "SingleRouteError": {
+                "type": "object",
+                "required": [
+                    "msg"
+                ],
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "example": "field_name",
+                        "nullable": true
+                    },
+                    "msg": {
+                        "type": "string",
+                        "example": "Invalid input in field_name."
+                    }
+                }
+            },
+            "User": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "created",
+                    "changed",
+                    "username"
+                ],
+                "properties": {
+                    "changed": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "username": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "access_token": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Liftlog",
+            "description": "Web application to record exercise sets and repetitions."
+        }
+    ]
+}
