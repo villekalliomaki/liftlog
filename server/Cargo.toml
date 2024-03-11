@@ -37,7 +37,7 @@ utoipa-redoc = { version = "3.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "3.0.0", features = ["axum"] }
 tower = "0.4.13"
 axum-test = "14.2.2 "
-validator = { version = "0.16.1", features = ["derive"] }
+validator = { version = "0.17.0", features = ["derive"] }
 lazy_static = "1.4.0"
 regex = "1.10.2"
 axum-macros = "0.4.0"
